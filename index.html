@@ -32,14 +32,8 @@ text-align:center;
 background:radial-gradient(circle,#0a0a12,#050507);
 }
 
-h1{
-color:#00f0ff;
-font-size:48px;
-}
-
-h2{
-font-size:26px;
-}
+h1{color:#00f0ff;font-size:50px;}
+h2{font-size:26px;}
 
 button{
 width:85%;
@@ -53,27 +47,24 @@ background:linear-gradient(90deg,#00f0ff,#7b61ff);
 color:white;
 }
 
-input{
-width:80%;
-padding:15px;
-margin:8px;
-border:none;
-border-radius:12px;
-background:#111;
-color:white;
-font-size:16px;
-}
-
 .box{
 width:85%;
-height:260px;
+height:280px;
 border-radius:20px;
 border:2px solid #00f0ff;
 background:rgba(0,255,255,0.08);
-display:flex;
-justify-content:center;
-align-items:center;
-font-size:24px;
+position:relative;
+overflow:hidden;
+}
+
+.target{
+width:40px;
+height:40px;
+border-radius:50%;
+background:#00f0ff;
+position:absolute;
+cursor:pointer;
+box-shadow:0 0 15px #00f0ff;
 }
 
 .big{
@@ -92,12 +83,12 @@ color:#00f0ff;
 
 const root=document.getElementById("root");
 
-/* ================= STATE ================= */
 let gameIndex=0;
-let score=0;
+let totalScore=0;
+let gameScore=0;
 let canPlay=false;
 
-/* ================= SAFE RENDER ================= */
+/* ================= RENDER ================= */
 function render(html){
 root.innerHTML=html;
 }
@@ -106,39 +97,8 @@ root.innerHTML=html;
 boot();
 
 function boot(){
-loginScreen();
-}
-
-/* ================= LOGIN (SIMPLIFIÉ = ZÉRO BUG) ================= */
-function loginScreen(){
-
-render(`
-<div class="screen">
-  <h1>⚡ TYMERZ</h1>
-
-  <input id="u" placeholder="username">
-  <input id="p" type="password" placeholder="password">
-
-  <button onclick="login()">Connexion</button>
-</div>
-`);
-
-}
-
-window.login=()=>{
-
-const u=document.getElementById("u").value;
-const p=document.getElementById("p").value;
-
-/* SIMPLE VALIDATION (pas backend pour éviter bug) */
-if(u.length<1 || p.length<1){
-alert("Remplis les champs");
-return;
-}
-
 menu();
-
-};
+}
 
 /* ================= MENU ================= */
 function menu(){
@@ -147,81 +107,73 @@ render(`
 <div class="screen">
   <h1>⚡ TYMERZ</h1>
 
-  <button onclick="start()">JOUER</button>
+  <button onclick="startGame()">JOUER</button>
 </div>
 `);
 
 }
 
-window.start=()=>{
+window.startGame=()=>{
 
 gameIndex=0;
-score=0;
-rules();
+totalScore=0;
+nextGame();
 
 };
 
-/* ================= RULES ================= */
-function rules(){
+/* ================= GAME FLOW ================= */
+function nextGame(){
+showIntro();
+}
 
-const rules=[
+/* ================= INTRO SCREEN ================= */
+function showIntro(){
+
+const texts=[
 "⌛ Clique au bon moment",
 "⚡ Réflexe SPACE",
-"🔥 Spam click",
-"🎯 Click rapide"
+"🔥 Spam rapide",
+"🎯 Clique les cibles"
 ];
 
 render(`
 <div class="screen">
-  <h2>${rules[gameIndex]}</h2>
-  <button onclick="startGame()">START</button>
+  <h2>${texts[gameIndex]}</h2>
+
+  <p>Appuie sur START ou ESPACE</p>
+
+  <button onclick="start()">START</button>
 </div>
 `);
 
-}
-
-window.startGame=()=>countdown();
-
-/* ================= COUNTDOWN ================= */
-function countdown(){
-
-let c=3;
-
-render(`<div class="screen"><h1 class="big">${c}</h1></div>`);
-
-const i=setInterval(()=>{
-
-c--;
-
-if(c<=0){
-clearInterval(i);
-runGame();
-return;
-}
-
-render(`<div class="screen"><h1 class="big">${c}</h1></div>`);
-
-},700);
+window.onkeydown=(e)=>{
+if(e.code==="Space") start();
+};
 
 }
 
-/* ================= GAME ENGINE ================= */
-function runGame(){
+/* ================= START GAME ================= */
+window.start=()=>{
 
+window.onkeydown=null;
+gameScore=0;
 canPlay=true;
 
-/* RESET INPUT */
-window.onkeydown=null;
+if(gameIndex===0) game1();
+if(gameIndex===1) game2();
+if(gameIndex===2) game3();
+if(gameIndex===3) game4();
+
+};
 
 /* ================= GAME 1 ================= */
-if(gameIndex===0){
+function game1(){
 
 let start=Date.now();
 
 render(`
 <div class="screen">
   <h2>⌛ SPACE au bon moment</h2>
-  <p>Attends ~5 secondes puis appuie</p>
 </div>
 `);
 
@@ -230,7 +182,7 @@ if(!canPlay) return;
 
 if(e.code==="Space"){
 let t=Date.now()-start;
-score += Math.max(0,1000-Math.abs(5000-t));
+gameScore=Math.max(0,1000-Math.abs(5000-t));
 endGame();
 }
 };
@@ -238,14 +190,14 @@ endGame();
 }
 
 /* ================= GAME 2 ================= */
-if(gameIndex===1){
+function game2(){
 
 let go=false;
 let start=0;
 
 render(`
 <div class="screen">
-  <h2>⚡ ATTENDS GO</h2>
+  <h2>⚡ Attends GO</h2>
 </div>
 `);
 
@@ -266,23 +218,23 @@ window.onkeydown=(e)=>{
 if(!canPlay) return;
 
 if(e.code==="Space" && go){
-score += Math.max(0,1000-(Date.now()-start));
+gameScore=Math.max(0,1000-(Date.now()-start));
 endGame();
 }
 };
 
 }
 
-/* ================= GAME 3 ================= */
-if(gameIndex===2){
+/* ================= GAME 3 (SPAM FIXED) ================= */
+function game3(){
 
 let count=0;
 
 render(`
 <div class="screen">
-  <h2>🔥 SPAM CLICK</h2>
+  <h2>🔥 SPAM</h2>
 
-  <div id="box" class="box">CLICK</div>
+  <div class="box" id="box"></div>
   <h1 id="c">0</h1>
 </div>
 `);
@@ -290,11 +242,7 @@ render(`
 const box=document.getElementById("box");
 const c=document.getElementById("c");
 
-box.onclick=()=>{
-if(!canPlay) return;
-count++;
-c.innerText=count;
-};
+box.onclick=()=>{if(canPlay){count++;c.innerText=count;}};
 
 window.onkeydown=(e)=>{
 if(e.code==="Space" && canPlay){
@@ -304,40 +252,60 @@ c.innerText=count;
 };
 
 setTimeout(()=>{
-
-score += count*50;
+gameScore=count*50;
 endGame();
-
 },5000);
 
 }
 
-/* ================= GAME 4 ================= */
-if(gameIndex===3){
+/* ================= GAME 4 (NEW TARGET GAME) ================= */
+function game4(){
 
-let clicks=0;
+let hits=0;
 
 render(`
 <div class="screen">
-  <h2>🎯 CLICK RAPIDE</h2>
+  <h2>🎯 Clique les cibles</h2>
 
-  <div class="box"></div>
+  <div class="box" id="arena"></div>
+  <h1 id="h">0</h1>
 </div>
 `);
 
-document.querySelector(".box").onclick=()=>{
+const arena=document.getElementById("arena");
+const h=document.getElementById("h");
+
+function spawn(){
+
+arena.innerHTML="";
+
+for(let i=0;i<5;i++){
+
+const t=document.createElement("div");
+t.className="target";
+
+t.style.left=Math.random()*80+"%";
+t.style.top=Math.random()*80+"%";
+
+t.onclick=()=>{
 if(!canPlay) return;
-clicks++;
+hits++;
+h.innerText=hits;
+t.remove();
 };
 
-setTimeout(()=>{
-
-score += clicks*60;
-endGame();
-
-},5000);
+arena.appendChild(t);
 
 }
+
+}
+
+spawn();
+
+setTimeout(()=>{
+gameScore=hits*80;
+endGame();
+},6000);
 
 }
 
@@ -347,38 +315,46 @@ function endGame(){
 canPlay=false;
 window.onkeydown=null;
 
-score=Math.max(0,score);
+totalScore+=gameScore;
 
 render(`
 <div class="screen">
-  <h1>Score</h1>
-  <h2 class="big">${Math.round(score)}</h2>
+  <h2>Score épreuve</h2>
+  <h1 class="big">${gameScore}</h1>
+
+  <p>Total: ${totalScore}</p>
+
+  <button onclick="next()">SUIVANT</button>
 </div>
 `);
 
-setTimeout(()=>{
+}
+
+/* ================= NEXT ================= */
+window.next=()=>{
 
 gameIndex++;
 
 if(gameIndex>=4){
-end();
+final();
 }else{
-rules();
+nextGame();
 }
 
-},1200);
+};
 
-}
-
-/* ================= END ================= */
-function end(){
+/* ================= FINAL SCREEN ================= */
+function final(){
 
 render(`
 <div class="screen">
   <h1>🏆 FIN</h1>
-  <h2>${Math.round(score)}</h2>
 
-  <button onclick="menu()">MENU</button>
+  <h2>Total Score</h2>
+  <h1 class="big">${totalScore}</h1>
+
+  <button onclick="menu()">CLASSEMENT</button>
+  <button onclick="startGame()">REJOUER</button>
 </div>
 `);
 
