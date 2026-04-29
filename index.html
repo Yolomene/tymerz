@@ -1,45 +1,45 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>TYMERZ</title>
 
 <script type="module">
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 /* ================= SUPABASE ================= */
-const SUPABASE_URL = "https://lsgrfmweasnjzkwzhnys.supabase.co";
-const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxzZ3JmbXdlYXNuanprd3pobnlzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc0NTg5NjUsImV4cCI6MjA5MzAzNDk2NX0.zovLpylyQTNVx0AIOhUCCQ_BdnkghAU3isR3YHoLHY8";
-
-const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+const supabase = createClient(
+"https://lsgrfmweasnjzkwzhnys.supabase.co",
+"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxzZ3JmbXdlYXNuanprd3pobnlzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc0NTg5NjUsImV4cCI6MjA5MzAzNDk2NX0.zovLpylyQTNVx0AIOhUCCQ_BdnkghAU3isR3YHoLHY8"
+);
 
 /* ================= STATE ================= */
 let user=null;
 let game=0;
 let score=0;
-let lock=true;
+let locked=true;
 
 /* ================= ROOT ================= */
 const root=document.getElementById("root");
 
-/* ================= SESSION RESTORE ================= */
+/* ================= SESSION ================= */
 async function init(){
 
 const { data } = await supabase.auth.getSession();
 
 if(data.session){
-  user = data.session.user;
-  menu();
-} else {
-  loginScreen();
+user=data.session.user;
+menu();
+}else{
+loginScreen();
 }
 
 }
 
 init();
 
-/* ================= LOGIN SCREEN ================= */
+/* ================= LOGIN ================= */
 function loginScreen(){
 
 root.innerHTML=`
@@ -58,12 +58,11 @@ root.innerHTML=`
 
 window.login=async()=>{
 
-const email=document.getElementById("email").value;
-const password=document.getElementById("password").value;
+const email=emailInput.value;
+const password=passwordInput.value;
 
-const { data, error } = await supabase.auth.signInWithPassword({
-  email,
-  password
+const { data,error } = await supabase.auth.signInWithPassword({
+email,password
 });
 
 if(error) return alert(error.message);
@@ -75,12 +74,11 @@ menu();
 
 window.signup=async()=>{
 
-const email=document.getElementById("email").value;
-const password=document.getElementById("password").value;
+const email=emailInput.value;
+const password=passwordInput.value;
 
 const { error } = await supabase.auth.signUp({
-  email,
-  password
+email,password
 });
 
 if(error) return alert(error.message);
@@ -95,68 +93,30 @@ root.innerHTML=`
 <div class="screen center">
   <h1>⚡ TYMERZ</h1>
 
-  <button onclick="startGame()">Jouer</button>
-  <button onclick="showLeaderboard()">Leaderboard</button>
-  <button onclick="logout()">Logout</button>
+  <button class="bigBtn" onclick="start()">JOUER</button>
+  <button class="bigBtn" onclick="leaderboard()">LEADERBOARD</button>
 </div>
 `;
 
 }
 
-window.logout=async()=>{
-
-await supabase.auth.signOut();
-location.reload();
-
-};
-
-/* ================= LEADERBOARD ================= */
-window.showLeaderboard=async()=>{
-
-const { data } = await supabase
-.from("users")
-.select("*")
-.order("score",{ascending:false})
-.limit(10);
-
-root.innerHTML=`
-<div class="screen center">
-  <h2>🏆 Leaderboard</h2>
-
-  ${data.map(u=>`
-    <p>${u.username || u.email} — ${u.score}</p>
-  `).join("")}
-
-  <button onclick="menu()">Retour</button>
-</div>
-`;
-
-};
-
-/* ================= GAME FLOW ================= */
-window.startGame=()=>{
-
-game=0;
-score=0;
-rules();
-
-};
+window.start=()=>rules();
 
 /* ================= RULES ================= */
 function rules(){
 
-const texts=[
-"⌛ 5 secondes parfaites",
-"⚡ Réflexe instantané",
-"⏱ Stop parfait",
-"🔥 Spam ESPACE",
+const txt=[
+"⌛ Clique au bon timing",
+"⚡ Réflexe GO",
+"⏱ Stop précis",
+"🔥 Spam la zone",
 "🎯 Click rapide"
 ];
 
 root.innerHTML=`
 <div class="screen center">
-  <h2>${texts[game]}</h2>
-  <button onclick="play()">START</button>
+  <h2>${txt[game]}</h2>
+  <button class="bigBtn" onclick="play()">START</button>
 </div>
 `;
 
@@ -167,37 +127,56 @@ window.play=()=>run();
 /* ================= GAME ENGINE ================= */
 function run(){
 
+locked=true;
 let start=Date.now();
-lock=false;
 
-root.innerHTML=`<div class="screen center big">GO</div>`;
+root.innerHTML=`<div class="screen center big">READY</div>`;
 
-/* GAME 1 */
+/* ================= GAME 1 ================= */
 if(game===0){
 
+setTimeout(()=>{
+
+root.innerHTML=`
+<div class="screen center">
+  <h2>⌛ Appuie à 5 secondes</h2>
+  <div class="circle"></div>
+</div>
+`;
+
+locked=false;
+
 window.onkeydown=(e)=>{
-if(lock) return;
+if(locked) return;
 if(e.code==="Space"){
-score += 1000 - Math.abs(5 - (Date.now()-start)/1000)*200;
+let t=(Date.now()-start)/1000;
+score += 1000 - Math.abs(5-t)*200;
 next();
 }
 };
 
+},500);
+
 }
 
-/* GAME 2 */
+/* ================= GAME 2 ================= */
 if(game===1){
 
 let go=false;
 
 setTimeout(()=>{
+
 go=true;
 start=Date.now();
-root.innerHTML=`<div class="screen center big">GO!</div>`;
+
+root.innerHTML=`
+<div class="screen center big">GO!</div>
+`;
+
 },1500);
 
 window.onkeydown=(e)=>{
-if(lock) return;
+if(locked) return;
 if(e.code==="Space" && go){
 score += 1000-(Date.now()-start);
 next();
@@ -206,37 +185,72 @@ next();
 
 }
 
-/* GAME 3 */
+/* ================= GAME 3 ================= */
 if(game===2){
 
+root.innerHTML=`
+<div class="screen center">
+  <h2>⏱ STOP EXACT</h2>
+</div>
+`;
+
 window.onkeydown=(e)=>{
-if(lock) return;
+if(locked) return;
 if(e.code==="Space"){
-score += 800;
+score += 900;
 next();
 }
 };
 
 }
 
-/* GAME 4 */
+/* ================= GAME 4 ================= */
 if(game===3){
 
-let c=0;
-window.onkeydown=()=>c++;
+let count=0;
+
+root.innerHTML=`
+<div class="screen center">
+  <h2>🔥 SPAM LA ZONE</h2>
+
+  <div id="box" class="gameBox">TAP HERE</div>
+  <div id="counter">0</div>
+</div>
+`;
+
+const box=document.getElementById("box");
+const counter=document.getElementById("counter");
+
+box.onclick=()=>{
+count++;
+counter.innerText=count;
+counter.classList.add("pop");
+setTimeout(()=>counter.classList.remove("pop"),100);
+};
 
 setTimeout(()=>{
-score += c*40;
+score += count*50;
 next();
 },5000);
 
 }
 
-/* GAME 5 */
+/* ================= GAME 5 ================= */
 if(game===4){
 
 let clicks=0;
-window.onclick=()=>clicks++;
+
+root.innerHTML=`
+<div class="screen center">
+  <h2>🎯 CLICK RAPIDE</h2>
+
+  <div class="clickZone"></div>
+</div>
+`;
+
+document.querySelector(".clickZone").onclick=()=>{
+clicks++;
+};
 
 setTimeout(()=>{
 score += clicks*60;
@@ -250,7 +264,7 @@ next();
 /* ================= NEXT ================= */
 async function next(){
 
-lock=true;
+locked=true;
 game++;
 
 if(game>=5){
@@ -265,7 +279,7 @@ return;
 
 }
 
-setTimeout(()=>rules(),700);
+setTimeout(()=>rules(),800);
 
 }
 
@@ -275,23 +289,50 @@ function end(){
 root.innerHTML=`
 <div class="screen center">
   <h1>🏆 ${Math.round(score)}</h1>
-  <button onclick="menu()">Menu</button>
+  <button class="bigBtn" onclick="menu()">MENU</button>
 </div>
 `;
 
 }
 
+/* ================= LEADERBOARD ================= */
+async function leaderboard(){
+
+const { data } = await supabase
+.from("users")
+.select("*")
+.order("score",{ascending:false})
+.limit(10);
+
+root.innerHTML=`
+<div class="screen center">
+  <h2>🏆 LEADERBOARD</h2>
+
+  ${data.map(u=>`
+    <p>${u.username || u.email} — ${u.score}</p>
+  `).join("")}
+
+  <button class="bigBtn" onclick="menu()">RETOUR</button>
+</div>
+`;
+
+}
+
+window.login=login;
+window.signup=signup;
+window.menu=menu;
+
 </script>
 
 <style>
 
-body{
+html,body{
 margin:0;
-height:100vh;
+height:100%;
 overflow:hidden;
+font-family:Arial;
 background:#050510;
 color:white;
-font-family:Arial;
 }
 
 #root{
@@ -307,49 +348,89 @@ display:flex;
 flex-direction:column;
 justify-content:center;
 align-items:center;
+text-align:center;
 background:radial-gradient(circle,#0a0a12,#050507);
 }
 
-/* CENTER TEXT */
-.center{text-align:center;gap:10px}
-
-/* INPUT */
-input{
-padding:12px;
-margin:5px;
+/* BIG BUTTONS (IMPORTANT UX FIX) */
+.bigBtn{
+width:85%;
+height:90px;
+font-size:24px;
+border-radius:25px;
 border:none;
-border-radius:10px;
-width:220px;
-background:#111;
-color:white;
-}
-
-/* BUTTON */
-button{
-padding:15px;
-margin:8px;
-width:220px;
-border:none;
-border-radius:15px;
+margin:10px;
 background:linear-gradient(90deg,#00f0ff,#7b61ff);
 color:white;
 font-weight:bold;
-font-size:16px;
-cursor:pointer;
 }
 
-/* BIG GAME TEXT */
+/* INPUT */
+input{
+width:80%;
+padding:15px;
+margin:8px;
+border:none;
+border-radius:15px;
+background:#111;
+color:white;
+font-size:16px;
+}
+
+/* GAME TEXT */
 .big{
 font-size:60px;
 color:#00f0ff;
 text-shadow:0 0 25px #00f0ff;
 }
 
+/* SPAM BOX */
+.gameBox{
+width:80%;
+height:250px;
+display:flex;
+justify-content:center;
+align-items:center;
+border-radius:25px;
+background:rgba(0,255,255,0.08);
+border:2px solid #00f0ff;
+font-size:28px;
+margin-top:20px;
+}
+
+/* COUNTER */
+#counter{
+font-size:50px;
+margin-top:20px;
+color:#00f0ff;
+}
+
+/* CLICK ZONE */
+.clickZone{
+width:80%;
+height:250px;
+border-radius:25px;
+background:rgba(123,97,255,0.1);
+border:2px solid #7b61ff;
+margin-top:20px;
+}
+
+/* CIRCLE */
+.circle{
+width:140px;
+height:140px;
+border-radius:50%;
+border:3px solid #00f0ff;
+box-shadow:0 0 25px #00f0ff;
+margin:20px;
+}
+
+/* POP ANIMATION */
+.pop{
+transform:scale(1.2);
+}
+
 </style>
-
-<body>
-
-<div id="root"></div>
 
 </body>
 </html>
