@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>TYMERZ</title>
 
 <script type="module">
@@ -16,326 +16,340 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
 /* ================= STATE ================= */
 let user=null;
-let step="login";
 let game=0;
 let score=0;
+let lock=true;
 
 /* ================= ROOT ================= */
-const root = document.getElementById("root");
+const root=document.getElementById("root");
 
-/* ================= RENDER SYSTEM ================= */
-function render(html, transition=true){
+/* ================= SESSION RESTORE ================= */
+async function init(){
 
-  const old = document.querySelector(".screen");
+const { data } = await supabase.auth.getSession();
 
-  if(old && transition){
-    old.classList.add("out");
-    setTimeout(()=>{
-      root.innerHTML = html;
-    },250);
-  } else {
-    root.innerHTML = html;
-  }
-
-}
-
-/* ================= LOGIN ================= */
-async function login(){
-
-  const u = document.getElementById("u").value;
-  const p = document.getElementById("p").value;
-
-  const { data } = await supabase
-    .from("users")
-    .select("*")
-    .eq("username",u)
-    .eq("password",p);
-
-  if(!data.length) return alert("Erreur login");
-
-  user=data[0];
+if(data.session){
+  user = data.session.user;
   menu();
+} else {
+  loginScreen();
 }
 
-async function signup(){
-
-  await supabase.from("users").insert({
-    username:document.getElementById("u").value,
-    password:document.getElementById("p").value,
-    score:0
-  });
-
-  alert("Compte créé !");
 }
+
+init();
+
+/* ================= LOGIN SCREEN ================= */
+function loginScreen(){
+
+root.innerHTML=`
+<div class="screen center">
+  <h1>⚡ TYMERZ</h1>
+
+  <input id="email" placeholder="email">
+  <input id="password" type="password" placeholder="password">
+
+  <button onclick="signup()">Créer compte</button>
+  <button onclick="login()">Connexion</button>
+</div>
+`;
+
+}
+
+window.login=async()=>{
+
+const email=document.getElementById("email").value;
+const password=document.getElementById("password").value;
+
+const { data, error } = await supabase.auth.signInWithPassword({
+  email,
+  password
+});
+
+if(error) return alert(error.message);
+
+user=data.user;
+menu();
+
+};
+
+window.signup=async()=>{
+
+const email=document.getElementById("email").value;
+const password=document.getElementById("password").value;
+
+const { error } = await supabase.auth.signUp({
+  email,
+  password
+});
+
+if(error) return alert(error.message);
+
+alert("Compte créé !");
+};
 
 /* ================= MENU ================= */
 function menu(){
 
-  render(`
-  <div class="screen full center">
-    <h1>⚡ TYMERZ</h1>
-    <button onclick="start()">Jouer</button>
-    <button onclick="leaderboard()">Leaderboard</button>
-  </div>
-  `);
+root.innerHTML=`
+<div class="screen center">
+  <h1>⚡ TYMERZ</h1>
+
+  <button onclick="startGame()">Jouer</button>
+  <button onclick="showLeaderboard()">Leaderboard</button>
+  <button onclick="logout()">Logout</button>
+</div>
+`;
 
 }
 
-window.start=()=>rules();
+window.logout=async()=>{
+
+await supabase.auth.signOut();
+location.reload();
+
+};
+
+/* ================= LEADERBOARD ================= */
+window.showLeaderboard=async()=>{
+
+const { data } = await supabase
+.from("users")
+.select("*")
+.order("score",{ascending:false})
+.limit(10);
+
+root.innerHTML=`
+<div class="screen center">
+  <h2>🏆 Leaderboard</h2>
+
+  ${data.map(u=>`
+    <p>${u.username || u.email} — ${u.score}</p>
+  `).join("")}
+
+  <button onclick="menu()">Retour</button>
+</div>
+`;
+
+};
+
+/* ================= GAME FLOW ================= */
+window.startGame=()=>{
+
+game=0;
+score=0;
+rules();
+
+};
 
 /* ================= RULES ================= */
 function rules(){
 
-  const rules=[
-    "⌛ Maintiens 5 secondes",
-    "⚡ Réflexe instantané",
-    "⏱ Stop parfait",
-    "🔥 Spam ESPACE",
-    "🎯 Click rapide"
-  ];
+const texts=[
+"⌛ 5 secondes parfaites",
+"⚡ Réflexe instantané",
+"⏱ Stop parfait",
+"🔥 Spam ESPACE",
+"🎯 Click rapide"
+];
 
-  render(`
-  <div class="screen full center">
-    <h2>${rules[game]}</h2>
-    <p>Appuie sur ESPACE pour commencer</p>
-    <button onclick="play()">START</button>
-  </div>
-  `);
+root.innerHTML=`
+<div class="screen center">
+  <h2>${texts[game]}</h2>
+  <button onclick="play()">START</button>
+</div>
+`;
 
 }
 
-window.play=()=>runGame();
+window.play=()=>run();
 
 /* ================= GAME ENGINE ================= */
-function runGame(){
+function run(){
 
-  let start=Date.now();
+let start=Date.now();
+lock=false;
 
-  render(`<div class="screen full game">GO</div>`);
+root.innerHTML=`<div class="screen center big">GO</div>`;
 
-  setTimeout(()=>{
+/* GAME 1 */
+if(game===0){
 
-    /* GAME 1 */
-    if(game===0){
-      window.onkeydown=(e)=>{
-        if(e.code==="Space"){
-          const t=(Date.now()-start)/1000;
-          score += 1000 - Math.abs(5-t)*200;
-          next();
-        }
-      };
-    }
+window.onkeydown=(e)=>{
+if(lock) return;
+if(e.code==="Space"){
+score += 1000 - Math.abs(5 - (Date.now()-start)/1000)*200;
+next();
+}
+};
 
-    /* GAME 2 */
-    if(game===1){
-      let go=false;
+}
 
-      setTimeout(()=>{
-        go=true;
-        start=Date.now();
-        render(`<div class="screen full game glow">GO!</div>`);
-      },1500);
+/* GAME 2 */
+if(game===1){
 
-      window.onkeydown=(e)=>{
-        if(e.code==="Space" && go){
-          score += 1000-(Date.now()-start);
-          next();
-        }
-      };
-    }
+let go=false;
 
-    /* GAME 3 */
-    if(game===2){
-      window.onkeydown=(e)=>{
-        if(e.code==="Space"){
-          const t=(Date.now()-start)/1000;
-          score += 1000 - Math.abs(10-t)*100;
-          next();
-        }
-      };
-    }
+setTimeout(()=>{
+go=true;
+start=Date.now();
+root.innerHTML=`<div class="screen center big">GO!</div>`;
+},1500);
 
-    /* GAME 4 */
-    if(game===3){
-      let c=0;
-      window.onkeydown=()=>c++;
+window.onkeydown=(e)=>{
+if(lock) return;
+if(e.code==="Space" && go){
+score += 1000-(Date.now()-start);
+next();
+}
+};
 
-      setTimeout(()=>{
-        score += c*40;
-        next();
-      },5000);
-    }
+}
 
-    /* GAME 5 */
-    if(game===4){
-      let clicks=0;
-      window.onclick=()=>clicks++;
+/* GAME 3 */
+if(game===2){
 
-      setTimeout(()=>{
-        score += clicks*60;
-        next();
-      },5000);
-    }
+window.onkeydown=(e)=>{
+if(lock) return;
+if(e.code==="Space"){
+score += 800;
+next();
+}
+};
 
-  },300);
+}
+
+/* GAME 4 */
+if(game===3){
+
+let c=0;
+window.onkeydown=()=>c++;
+
+setTimeout(()=>{
+score += c*40;
+next();
+},5000);
+
+}
+
+/* GAME 5 */
+if(game===4){
+
+let clicks=0;
+window.onclick=()=>clicks++;
+
+setTimeout(()=>{
+score += clicks*60;
+next();
+},5000);
+
+}
 
 }
 
 /* ================= NEXT ================= */
-function next(){
+async function next(){
 
-  game++;
+lock=true;
+game++;
 
-  if(game>=5){
-    end();
-    return;
-  }
+if(game>=5){
 
-  rules();
+await supabase
+.from("users")
+.update({ score })
+.eq("id",user.id);
+
+end();
+return;
+
+}
+
+setTimeout(()=>rules(),700);
 
 }
 
 /* ================= END ================= */
 function end(){
 
-  render(`
-  <div class="screen full center">
-    <h1>🏆 ${Math.round(score)}</h1>
-    <button onclick="location.reload()">Rejouer</button>
-  </div>
-  `);
+root.innerHTML=`
+<div class="screen center">
+  <h1>🏆 ${Math.round(score)}</h1>
+  <button onclick="menu()">Menu</button>
+</div>
+`;
 
 }
-
-/* ================= LEADERBOARD ================= */
-async function leaderboard(){
-
-  const { data } = await supabase
-    .from("users")
-    .select("*")
-    .order("score",{ascending:false})
-    .limit(10);
-
-  render(`
-  <div class="screen full center">
-    <h2>Leaderboard</h2>
-    ${data.map(u=>`<p>${u.username} - ${u.score}</p>`).join("")}
-    <button onclick="menu()">Retour</button>
-  </div>
-  `);
-
-}
-
-window.login=login;
-window.signup=signup;
-window.menu=menu;
 
 </script>
 
 <style>
 
-html,body{
+body{
 margin:0;
-height:100%;
+height:100vh;
 overflow:hidden;
-font-family:Arial;
 background:#050510;
 color:white;
+font-family:Arial;
 }
 
-/* FULL SCREEN ENGINE */
 #root{
 width:100%;
 height:100%;
 }
 
-/* SCREEN BASE */
+/* FULL SCREEN */
 .screen{
 width:100%;
 height:100%;
-position:absolute;
-top:0;
-left:0;
 display:flex;
 flex-direction:column;
 justify-content:center;
 align-items:center;
-transition:all .25s ease;
-}
-
-/* TRANSITION OUT */
-.out{
-opacity:0;
-transform:scale(1.05);
-filter:blur(10px);
-}
-
-/* FULL SCREEN LAYOUT */
-.full{
 background:radial-gradient(circle,#0a0a12,#050507);
 }
 
-/* CENTER */
-.center{
-text-align:center;
-gap:10px;
+/* CENTER TEXT */
+.center{text-align:center;gap:10px}
+
+/* INPUT */
+input{
+padding:12px;
+margin:5px;
+border:none;
+border-radius:10px;
+width:220px;
+background:#111;
+color:white;
 }
 
 /* BUTTON */
 button{
-padding:12px 20px;
+padding:15px;
+margin:8px;
+width:220px;
 border:none;
-border-radius:12px;
+border-radius:15px;
 background:linear-gradient(90deg,#00f0ff,#7b61ff);
 color:white;
 font-weight:bold;
+font-size:16px;
 cursor:pointer;
-width:200px;
 }
 
-/* INPUT */
-input{
-padding:10px;
-margin:5px;
-border-radius:10px;
-border:none;
-background:#111;
-color:white;
-width:200px;
-}
-
-/* GAME TEXT */
-.game{
-font-size:50px;
-text-shadow:0 0 20px #00f0ff;
-}
-
-/* GLOW */
-.glow{
+/* BIG GAME TEXT */
+.big{
+font-size:60px;
 color:#00f0ff;
-text-shadow:0 0 20px #00f0ff;
+text-shadow:0 0 25px #00f0ff;
 }
 
 </style>
 
-</head>
-
 <body>
 
 <div id="root"></div>
-
-<!-- LOGIN SCREEN INITIAL -->
-<script>
-document.getElementById("root").innerHTML=`
-<div class="screen full center">
-  <h1>⚡ TYMERZ</h1>
-  <input id="u" placeholder="pseudo">
-  <input id="p" type="password" placeholder="password">
-  <button onclick="signup()">Créer compte</button>
-  <button onclick="login()">Connexion</button>
-</div>
-`;
-</script>
 
 </body>
 </html>
