@@ -52,9 +52,9 @@ width:85%;
 height:280px;
 border-radius:20px;
 border:2px solid #00f0ff;
-background:rgba(0,255,255,0.08);
 position:relative;
 overflow:hidden;
+background:rgba(0,255,255,0.06);
 }
 
 .target{
@@ -63,14 +63,19 @@ height:40px;
 border-radius:50%;
 background:#00f0ff;
 position:absolute;
-cursor:pointer;
 box-shadow:0 0 15px #00f0ff;
+cursor:pointer;
 }
 
-.big{
-font-size:60px;
-color:#00f0ff;
+.light{
+width:120px;
+height:120px;
+border-radius:50%;
+background:red;
+box-shadow:0 0 40px red;
 }
+
+.big{font-size:60px;color:#00f0ff;}
 
 </style>
 </head>
@@ -84,8 +89,8 @@ color:#00f0ff;
 const root=document.getElementById("root");
 
 let gameIndex=0;
-let totalScore=0;
-let gameScore=0;
+let total=0;
+let score=0;
 let canPlay=false;
 
 /* ================= RENDER ================= */
@@ -94,11 +99,7 @@ root.innerHTML=html;
 }
 
 /* ================= BOOT ================= */
-boot();
-
-function boot(){
 menu();
-}
 
 /* ================= MENU ================= */
 function menu(){
@@ -107,56 +108,51 @@ render(`
 <div class="screen">
   <h1>⚡ TYMERZ</h1>
 
-  <button onclick="startGame()">JOUER</button>
+  <button onclick="start()">JOUER</button>
 </div>
 `);
 
 }
 
-window.startGame=()=>{
-
+window.start=()=>{
 gameIndex=0;
-totalScore=0;
-nextGame();
-
+total=0;
+next();
 };
 
-/* ================= GAME FLOW ================= */
-function nextGame(){
-showIntro();
+/* ================= FLOW ================= */
+function next(){
+intro();
 }
 
-/* ================= INTRO SCREEN ================= */
-function showIntro(){
+/* ================= INTRO ================= */
+function intro(){
 
-const texts=[
-"⌛ Clique au bon moment",
-"⚡ Réflexe SPACE",
-"🔥 Spam rapide",
-"🎯 Clique les cibles"
+const txt=[
+"⌛ HOLD SPACE 5 secondes",
+"⚡ Réflexe feu vert",
+"🔥 Spam click",
+"🎯 Cible rapide"
 ];
 
 render(`
 <div class="screen">
-  <h2>${texts[gameIndex]}</h2>
-
-  <p>Appuie sur START ou ESPACE</p>
-
-  <button onclick="start()">START</button>
+  <h2>${txt[gameIndex]}</h2>
+  <button onclick="startGame()">START</button>
 </div>
 `);
 
 window.onkeydown=(e)=>{
-if(e.code==="Space") start();
+if(e.code==="Space") startGame();
 };
 
 }
 
-/* ================= START GAME ================= */
-window.start=()=>{
+/* ================= START ================= */
+window.startGame=()=>{
 
 window.onkeydown=null;
-gameScore=0;
+score=0;
 canPlay=true;
 
 if(gameIndex===0) game1();
@@ -166,66 +162,82 @@ if(gameIndex===3) game4();
 
 };
 
-/* ================= GAME 1 ================= */
+/* ================= GAME 1 (HOLD SPACE) ================= */
 function game1(){
 
-let start=Date.now();
+let start=0;
+let holding=false;
+let timer;
 
 render(`
 <div class="screen">
-  <h2>⌛ SPACE au bon moment</h2>
+  <h2>MAINTIENS SPACE 5s</h2>
+  <p>Ne lâche pas</p>
 </div>
 `);
 
 window.onkeydown=(e)=>{
-if(!canPlay) return;
+if(e.code==="Space" && !holding){
+holding=true;
+start=Date.now();
 
-if(e.code==="Space"){
-let t=Date.now()-start;
-gameScore=Math.max(0,1000-Math.abs(5000-t));
-endGame();
+timer=setTimeout(()=>{
+score=1000;
+end();
+},5000);
 }
+};
+
+window.onkeyup=()=>{
+if(!holding) return;
+
+clearTimeout(timer);
+
+let t=(Date.now()-start)/5000;
+score=Math.max(0,Math.min(1000,t*1000));
+end();
 };
 
 }
 
-/* ================= GAME 2 ================= */
+/* ================= GAME 2 (TRAFFIC LIGHT) ================= */
 function game2(){
 
-let go=false;
 let start=0;
+let green=false;
 
 render(`
 <div class="screen">
-  <h2>⚡ Attends GO</h2>
+  <h2>Attends le vert</h2>
+
+  <div id="light" class="light"></div>
 </div>
 `);
+
+const light=document.getElementById("light");
+
+window.onkeydown=(e)=>{
+if(!canPlay) return;
+
+if(e.code==="Space" && green){
+score=Math.max(0,1000-(Date.now()-start));
+end();
+}
+};
 
 setTimeout(()=>{
 
-go=true;
+green=true;
 start=Date.now();
 
-render(`
-<div class="screen">
-  <h2 class="big">GO!</h2>
-</div>
-`);
+light.style.background="green";
+light.style.boxShadow="0 0 40px green";
 
 },1500);
 
-window.onkeydown=(e)=>{
-if(!canPlay) return;
-
-if(e.code==="Space" && go){
-gameScore=Math.max(0,1000-(Date.now()-start));
-endGame();
-}
-};
-
 }
 
-/* ================= GAME 3 (SPAM FIXED) ================= */
+/* ================= GAME 3 (SPAM) ================= */
 function game3(){
 
 let count=0;
@@ -252,20 +264,20 @@ c.innerText=count;
 };
 
 setTimeout(()=>{
-gameScore=count*50;
-endGame();
+score=Math.min(1000,count*50);
+end();
 },5000);
 
 }
 
-/* ================= GAME 4 (NEW TARGET GAME) ================= */
+/* ================= GAME 4 (TARGETS) ================= */
 function game4(){
 
 let hits=0;
 
 render(`
 <div class="screen">
-  <h2>🎯 Clique les cibles</h2>
+  <h2>🎯 Cibles rapides</h2>
 
   <div class="box" id="arena"></div>
   <h1 id="h">0</h1>
@@ -303,58 +315,55 @@ arena.appendChild(t);
 spawn();
 
 setTimeout(()=>{
-gameScore=hits*80;
-endGame();
-},6000);
+score=Math.min(1000,hits*200);
+end();
+},5000);
 
 }
 
-/* ================= END GAME ================= */
-function endGame(){
+/* ================= END ================= */
+function end(){
 
 canPlay=false;
-window.onkeydown=null;
-
-totalScore+=gameScore;
+total+=score;
 
 render(`
 <div class="screen">
   <h2>Score épreuve</h2>
-  <h1 class="big">${gameScore}</h1>
+  <h1 class="big">${Math.round(score)}</h1>
 
-  <p>Total: ${totalScore}</p>
+  <p>Total: ${total}/5000</p>
 
-  <button onclick="next()">SUIVANT</button>
+  <button onclick="nextGame()">SUIVANT</button>
 </div>
 `);
 
 }
 
 /* ================= NEXT ================= */
-window.next=()=>{
+window.nextGame=()=>{
 
 gameIndex++;
 
 if(gameIndex>=4){
 final();
 }else{
-nextGame();
+next();
 }
 
 };
 
-/* ================= FINAL SCREEN ================= */
+/* ================= FINAL ================= */
 function final(){
 
 render(`
 <div class="screen">
   <h1>🏆 FIN</h1>
 
-  <h2>Total Score</h2>
-  <h1 class="big">${totalScore}</h1>
+  <h2>${total}/5000</h2>
 
   <button onclick="menu()">CLASSEMENT</button>
-  <button onclick="startGame()">REJOUER</button>
+  <button onclick="start()">REJOUER</button>
 </div>
 `);
 
