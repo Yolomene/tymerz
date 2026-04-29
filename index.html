@@ -27,7 +27,6 @@ justify-content:center;
 align-items:center;
 text-align:center;
 background:radial-gradient(circle,#0a0a12,#050507);
-position:relative;
 }
 
 h1{color:#00f0ff;font-size:48px;}
@@ -102,21 +101,9 @@ let score=0;
 let user=null;
 let inputLocked=false;
 
-/* SPACE FIX */
-document.addEventListener("keydown",(e)=>{
-if(e.code==="Space") e.preventDefault();
-},{passive:false});
-
-/* RENDER */
+/* ================= SAFE RENDER ================= */
 function render(html){
 root.innerHTML=html;
-}
-
-/* RESET */
-function reset(){
-window.onkeydown=null;
-window.onkeyup=null;
-inputLocked=false;
 }
 
 /* ================= LOGIN ================= */
@@ -131,7 +118,7 @@ render(`
 
 <button onclick="login()">Connexion</button>
 
-<p>Admin: TYMERZ2026</p>
+<p>Admin password: TYMERZ2026</p>
 </div>
 `);
 
@@ -158,7 +145,7 @@ menu();
 
 };
 
-/* BOOT */
+/* ================= BOOT ================= */
 boot();
 
 function boot(){
@@ -176,7 +163,7 @@ menu();
 /* ================= MENU ================= */
 function menu(){
 
-reset();
+cleanupAll();
 
 render(`
 <div class="screen">
@@ -210,14 +197,14 @@ function next(){ intro(); }
 /* ================= INTRO ================= */
 function intro(){
 
-reset();
+cleanupAll();
 
 const txt=[
 "HOLD 5 SECONDES",
 "FEU VERT",
 "TOGGLE 9 SECONDES",
 "SPAM",
-"CIBLES RAPIDES"
+"CIBLES"
 ];
 
 render(`
@@ -227,22 +214,51 @@ render(`
 </div>
 `);
 
-window.onkeydown=(e)=>{
+document.onkeydown=(e)=>{
 if(e.code==="Space") startGame();
 };
 
 }
 
-/* ================= GAME 1 ================= */
+/* ================= CLEAN EVENTS ================= */
+function cleanupAll(){
+document.onkeydown=null;
+document.onkeyup=null;
+inputLocked=false;
+}
+
+/* ================= START GAME ================= */
+window.startGame=()=>{
+
+cleanupAll();
+score=0;
+
+if(gameIndex===0) game1();
+if(gameIndex===1) game2();
+if(gameIndex===2) game3();
+if(gameIndex===3) game4();
+if(gameIndex===4) game5();
+
+};
+
+/* ================= GAME 1 (FIXED) ================= */
 function game1(){
 
 let start=0;
 let holding=false;
-let timer;
+let timer=null;
 
-render(`<div class="screen"><h2>MAINTIENS 5 SECONDES</h2></div>`);
+render(`
+<div class="screen">
+<h2>MAINTIENS SPACE</h2>
+<p>Objectif : 5 secondes</p>
+</div>
+`);
 
-window.onkeydown=(e)=>{
+document.addEventListener("keydown",down);
+document.addEventListener("keyup",up);
+
+function down(e){
 
 if(e.code!=="Space") return;
 
@@ -252,25 +268,34 @@ start=Date.now();
 
 timer=setTimeout(()=>{
 score=1000;
-endGame("perfect 5s");
+end();
 },5000);
 }
 
-};
+}
 
-window.onkeyup=(e)=>{
+function up(e){
 
 if(e.code!=="Space") return;
+
+if(!holding) return;
 
 clearTimeout(timer);
 
 let t=Date.now()-start;
 
-score=Math.max(0,1000-(Math.abs(5000-t)/5));
+score=Math.max(0,1000-Math.abs(5000-t)/5);
 
-endGame(`⏱ ${(t/1000).toFixed(2)}s`);
+end(`⏱ ${(t/1000).toFixed(2)}s`);
 
-};
+}
+
+function end(txt){
+document.removeEventListener("keydown",down);
+document.removeEventListener("keyup",up);
+inputLocked=true;
+endGame(txt);
+}
 
 }
 
@@ -289,7 +314,7 @@ render(`
 
 const c=document.querySelector(".bigCircle");
 
-window.onkeydown=(e)=>{
+document.onkeydown=(e)=>{
 
 if(e.code!=="Space") return;
 if(!green) return;
@@ -303,14 +328,13 @@ setTimeout(()=>{
 
 green=true;
 start=Date.now();
-
 c.style.background="green";
 
 },1500);
 
 }
 
-/* ================= GAME 3 ================= */
+/* ================= GAME 3 FIXED ================= */
 function game3(){
 
 let running=false;
@@ -322,7 +346,7 @@ render(`
 
 <div id="btn" class="bigCircle"></div>
 
-<p>SPACE start/stop</p>
+<p>SPACE ou click = start/stop</p>
 </div>
 `);
 
@@ -341,16 +365,14 @@ running=false;
 
 let t=Date.now()-start;
 
-let diff=Math.abs(t-9000);
-
-score=Math.max(0,1000-(diff/8));
+score=Math.max(0,1000-Math.abs(9000-t)/8);
 
 endGame(`⏱ ${(t/1000).toFixed(2)}s`);
 }
 
 }
 
-window.onkeydown=(e)=>{
+document.onkeydown=(e)=>{
 if(e.code==="Space") toggle();
 };
 
@@ -375,9 +397,9 @@ render(`
 
 const c=document.getElementById("c");
 
-window.onclick=()=>{if(!inputLocked){count++;c.innerText=count;}};
+document.onclick=()=>{if(!inputLocked){count++;c.innerText=count;}};
 
-window.onkeydown=(e)=>{
+document.onkeydown=(e)=>{
 if(e.code==="Space" && !inputLocked){
 count++;
 c.innerText=count;
@@ -401,7 +423,7 @@ endGame(`🔥 ${count}`);
 function game5(){
 
 let hits=0;
-let needed=6; // 🔥 FIX = 6 cibles
+let needed=6;
 let start=Date.now();
 
 render(`
@@ -440,8 +462,7 @@ if(hits===needed){
 
 let time=(Date.now()-start)/1000;
 
-/* 🔥 plus strict = 1000 only if fast */
-score = time < 3 ? 1000 : Math.max(300, 1000 - time*200);
+score = time < 3 ? 1000 : Math.max(400, 1000 - time*250);
 
 endGame(`⚡ ${time.toFixed(2)}s`);
 }
@@ -463,7 +484,7 @@ score=Math.min(1000,hits*(1000/needed));
 endGame("timeout");
 }
 
-},3500); // 🔥 plus rapide
+},3500);
 
 }
 
@@ -522,7 +543,7 @@ render(`
 
 }
 
-/* ================= LEADERBOARD (FIX FINAL) ================= */
+/* ================= LEADERBOARD (STABLE FINAL) ================= */
 function saveScore(){
 
 let board=[];
@@ -533,14 +554,11 @@ board=JSON.parse(localStorage.getItem("board")||"[]");
 board=[];
 }
 
-if(!user) user="guest";
-
 board.push({
-user:user,
+user:user||"guest",
 total:total
 });
 
-/* sécurité anti crash */
 board=board.filter(x=>x && typeof x.total==="number");
 
 board.sort((a,b)=>b.total-a.total);
