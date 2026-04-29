@@ -3,375 +3,82 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>TYmerz</title>
+<title>TYmerz DEBUG</title>
 
 <script type="module">
 
-/* ================= IMPORT SUPABASE (VERSION STABLE) ================= */
+/* ================= SUPABASE IMPORT ================= */
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 /* ================= CONFIG ================= */
 const SUPABASE_URL = "https://lsgrfmweasnjzkwzhnys.supabase.co";
-const SUPABASE_KEY = "TON_ANON_KEY_ICI"; // ⚠️ à remplacer
+const SUPABASE_KEY = "COLLE_TA_ANON_KEY_ICI";
 
-console.log("🚀 INIT SUPABASE...");
-console.log("URL =", SUPABASE_URL);
-console.log("KEY =", SUPABASE_KEY?.slice(0,20) + "...");
+console.log("🚀 START DEBUG SUPABASE");
+console.log("URL:", SUPABASE_URL);
+console.log("KEY (preview):", SUPABASE_KEY.slice(0,25) + "...");
 
-/* ================= CREATE CLIENT ================= */
+/* ================= INIT ================= */
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
-console.log("✅ SUPABASE CLIENT CREATED");
+console.log("✅ CLIENT CREATED");
 
-/* ================= TEST CONNECTION ================= */
-async function testConnection(){
-  console.log("🧪 TEST CONNECTION USERS TABLE...");
+/* ================= FULL TEST ================= */
+async function fullTest(){
 
-  const { data, error } = await supabase
+  console.log("🧪 TEST 1: BASIC CONNECTION...");
+
+  try {
+    const { data, error } = await supabase.auth.getSession();
+    console.log("AUTH SESSION:", data, error);
+  } catch (e) {
+    console.log("❌ AUTH ERROR:", e);
+  }
+
+  console.log("🧪 TEST 2: TABLE USERS...");
+
+  const res = await supabase
     .from("users")
     .select("*")
     .limit(1);
 
-  console.log("DATA =", data);
-  console.log("ERROR =", error);
-}
+  console.log("📦 USERS DATA:", res.data);
+  console.log("❌ USERS ERROR:", res.error);
 
-testConnection();
+  console.log("🧪 TEST 3: INSERT TEST (SAFE)...");
 
-/* ================= STATE ================= */
-let user = null;
-let game = -1;
-let total = 0;
-
-/* ================= DOM ================= */
-const $ = (id) => document.getElementById(id);
-
-/* ================= AUTH ================= */
-async function signup(){
-  const username = $("username").value;
-  const password = $("password").value;
-
-  console.log("🟡 SIGNUP TRY", username);
-
-  const { data, error } = await supabase
+  const testInsert = await supabase
     .from("users")
     .insert({
-      username,
-      password,
+      username: "debug_user",
+      password: "1234",
       score: 0
     })
     .select();
 
-  console.log("SIGNUP RESULT:", data, error);
+  console.log("📥 INSERT RESULT:", testInsert.data);
+  console.log("❌ INSERT ERROR:", testInsert.error);
 
-  if(error){
-    alert("Erreur signup: " + error.message);
-    return;
-  }
-
-  alert("Compte créé !");
 }
 
-async function login(){
-  const username = $("username").value;
-  const password = $("password").value;
-
-  console.log("🟡 LOGIN TRY", username);
-
-  const { data, error } = await supabase
-    .from("users")
-    .select("*")
-    .eq("username", username)
-    .eq("password", password);
-
-  console.log("LOGIN RESULT:", data, error);
-
-  if(error){
-    alert(error.message);
-    return;
-  }
-
-  if(!data || data.length === 0){
-    alert("Identifiants incorrects");
-    return;
-  }
-
-  user = data[0];
-  next();
-}
-
-/* ================= SCORE ================= */
-function addScore(v){
-  total += Math.max(0, Math.min(1000, Math.round(v)));
-  $("score").innerText = "+" + v;
-  $("nextBtn").style.display = "block";
-}
-
-/* ================= SAVE ================= */
-async function save(){
-  await supabase
-    .from("users")
-    .update({ score: total })
-    .eq("username", user.username);
-}
-
-/* ================= LEADERBOARD ================= */
-async function getLeaderboard(){
-  const { data } = await supabase
-    .from("users")
-    .select("*")
-    .order("score", { ascending:false })
-    .limit(10);
-
-  return data;
-}
-
-/* ================= FLOW ================= */
-function next(){
-  game++;
-  $("nextBtn").style.display="none";
-  load();
-}
-
-/* ================= SPACE CONTROL ================= */
-let space = false;
-
-document.addEventListener("keydown",(e)=>{
-  if(e.code==="Space" && !space){
-    space = true;
-    if(window.down) window.down();
-  }
-});
-
-document.addEventListener("keyup",(e)=>{
-  if(e.code==="Space"){
-    space = false;
-    if(window.up) window.up();
-  }
-});
-
-/* ================= GAME ================= */
-async function load(){
-
-  $("content").innerHTML="";
-  $("board").innerHTML="";
-  $("score").innerText="";
-
-  window.down = null;
-  window.up = null;
-
-  /* LOGIN SCREEN */
-  if(game === -1){
-    $("title").innerText = "⚡ TYMERZ";
-
-    $("content").innerHTML = `
-      <input id="username" placeholder="Pseudo">
-      <input id="password" type="password" placeholder="Mot de passe">
-      <button onclick="signup()">Créer compte</button>
-      <button onclick="login()">Connexion</button>
-    `;
-  }
-
-  /* GAME 1 */
-  else if(game === 0){
-    $("title").innerText = "⌛ 5 secondes parfaites";
-
-    $("content").innerHTML = "<p>Maintiens ESPACE</p>";
-
-    let start;
-
-    window.down = () => start = Date.now();
-    window.up = () =>
-      addScore(1000 - Math.abs(5 - (Date.now()-start)/1000)*200);
-  }
-
-  /* GAME 2 */
-  else if(game === 1){
-    $("title").innerText = "⚡ Réflexe";
-
-    $("content").innerHTML = "<p>Attends le GO</p>";
-
-    let ok=false;
-    let t;
-
-    setTimeout(()=>{
-      ok=true;
-      t=Date.now();
-      $("content").innerHTML="<div class='go'>GO!</div>";
-    },1500+Math.random()*2000);
-
-    window.down = ()=>{
-      if(ok) addScore(1000 - (Date.now()-t));
-    };
-  }
-
-  /* GAME 3 */
-  else if(game === 2){
-    $("title").innerText = "⏱ Stop parfait";
-
-    let s=Date.now();
-
-    window.down = () =>
-      addScore(1000 - Math.abs(10-(Date.now()-s)/1000)*100);
-  }
-
-  /* GAME 4 */
-  else if(game === 3){
-    $("title").innerText = "🔥 Spam ESPACE";
-
-    let c=0;
-    window.down = ()=>c++;
-
-    setTimeout(()=>addScore(c*50),5000);
-  }
-
-  /* GAME 5 */
-  else if(game === 4){
-    $("title").innerText = "🎯 Cibles";
-
-    $("content").innerHTML = `<div id="zone"></div>`;
-
-    setTimeout(()=>{
-      const zone = $("zone");
-      let clicks=0;
-      let start=Date.now();
-
-      function spawn(){
-        zone.innerHTML="";
-        for(let i=0;i<5;i++){
-          let d=document.createElement("div");
-          d.className="dot";
-          d.style.left=Math.random()*85+"%";
-          d.style.top=Math.random()*85+"%";
-
-          d.onclick=()=>{
-            clicks++;
-            spawn();
-          };
-
-          zone.appendChild(d);
-        }
-      }
-
-      spawn();
-
-      setTimeout(()=>{
-        addScore(1000 - (Date.now()-start)/10 + clicks*50);
-      },5000);
-
-    },50);
-  }
-
-  /* RESULT */
-  else {
-    await save();
-
-    let data = await getLeaderboard();
-
-    $("title").innerText = "🏆 Résultat";
-
-    $("content").innerHTML =
-      `<div class="total">Score : ${total}</div>`;
-
-    $("board").innerHTML =
-      "<h3>Leaderboard</h3>" +
-      data.map((p,i)=>
-        `<div class='row'>#${i+1} ${p.username} - ${p.score}</div>`
-      ).join("");
-  }
-}
-
-/* expose */
-window.signup = signup;
-window.login = login;
-window.next = next;
-
-load();
+/* run test */
+fullTest();
 
 </script>
 
-<style>
-body{
-margin:0;
-font-family:Arial;
-background:radial-gradient(circle at top,#0f172a,#020617);
-color:white;
-display:flex;
-justify-content:center;
-align-items:center;
-height:100vh;
-}
-
-.card{
-width:400px;
-padding:40px;
-border-radius:20px;
-background:rgba(255,255,255,0.05);
-backdrop-filter:blur(25px);
-box-shadow:0 0 80px rgba(0,0,0,0.8);
-text-align:center;
-}
-
-input{
-width:100%;
-margin:6px 0;
-padding:10px;
-border-radius:10px;
-border:1px solid #444;
-background:black;
-color:white;
-}
-
-button{
-margin:6px;
-padding:10px 15px;
-border-radius:10px;
-border:1px solid #444;
-background:#111;
-color:white;
-cursor:pointer;
-}
-
-button:hover{
-box-shadow:0 0 15px cyan;
-transform:scale(1.05);
-}
-
-.dot{
-width:35px;
-height:35px;
-background:cyan;
-border-radius:50%;
-position:absolute;
-box-shadow:0 0 15px cyan;
-cursor:pointer;
-}
-
-#zone{height:300px;position:relative;}
-
-.go{
-color:lime;
-font-size:32px;
-animation:blink .5s infinite;
-}
-
-@keyframes blink{50%{opacity:0.3}}
-
-.row{padding:4px}
-.total{font-size:22px;margin:10px}
-</style>
-
 </head>
 
-<body>
+<body style="background:#0a0a0a;color:white;font-family:Arial;padding:20px">
 
-<div class="card">
-<h1 id="title"></h1>
-<div id="content"></div>
-<div id="score"></div>
-<button id="nextBtn" onclick="next()" style="display:none">Suivant</button>
-<div id="board"></div>
-</div>
+<h1>TYMERZ DEBUG MODE</h1>
+
+<p>Ouvre la console (F12 → Console)</p>
+
+<ul>
+<li>Test 1 = connexion Supabase</li>
+<li>Test 2 = lecture table users</li>
+<li>Test 3 = insertion test</li>
+</ul>
 
 </body>
 </html>
