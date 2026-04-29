@@ -11,9 +11,9 @@ html,body{
 margin:0;
 height:100%;
 background:#050510;
-color:white;
 font-family:Arial;
 overflow:hidden;
+color:white;
 }
 
 #root{
@@ -32,35 +32,41 @@ text-align:center;
 background:radial-gradient(circle,#0a0a12,#050507);
 }
 
+h1{
+color:#00f0ff;
+font-size:50px;
+}
+
+h2{
+color:white;
+font-size:28px;
+}
+
 button{
 width:85%;
-height:90px;
+height:85px;
 margin:10px;
-font-size:22px;
 border:none;
 border-radius:20px;
-background:linear-gradient(90deg,#00f0ff,#7b61ff);
-color:white;
+font-size:22px;
 font-weight:bold;
+color:white;
+background:linear-gradient(90deg,#00f0ff,#7b61ff);
 }
 
 input{
 width:80%;
 padding:15px;
 margin:8px;
-border-radius:15px;
 border:none;
+border-radius:15px;
 background:#111;
 color:white;
 font-size:16px;
 }
 
-h1{
-color:#00f0ff;
-}
-
 .big{
-font-size:60px;
+font-size:70px;
 color:#00f0ff;
 text-shadow:0 0 20px #00f0ff;
 }
@@ -78,11 +84,6 @@ font-size:28px;
 cursor:pointer;
 }
 
-#counter{
-font-size:50px;
-margin-top:20px;
-}
-
 </style>
 </head>
 
@@ -94,22 +95,29 @@ margin-top:20px;
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-/* ================= STATE ================= */
+/* ================= ROOT ================= */
 const root=document.getElementById("root");
 
-let supabase=null;
-let user=null;
-let game=0;
-let score=0;
-let locked=true;
-
-/* ================= INIT SUPABASE ================= */
-async function init(){
-
-supabase=createClient(
+/* ================= SUPABASE ================= */
+const supabase=createClient(
 "https://lsgrfmweasnjzkwzhnys.supabase.co",
 "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxzZ3JmbXdlYXNuanprd3pobnlzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc0NTg5NjUsImV4cCI6MjA5MzAzNDk2NX0.zovLpylyQTNVx0AIOhUCCQ_BdnkghAU3isR3YHoLHY8"
 );
+
+/* ================= STATE ================= */
+let user=null;
+let game=0;
+let score=0;
+
+/* ================= RENDER ================= */
+function render(html){
+root.innerHTML=html;
+}
+
+/* ================= BOOT ================= */
+boot();
+
+async function boot(){
 
 const { data } = await supabase.auth.getSession();
 
@@ -117,39 +125,32 @@ if(data.session){
 user=data.session.user;
 menu();
 }else{
-loginScreen();
+login();
 }
 
-}
-
-init();
-
-/* ================= RENDER ================= */
-function render(html){
-root.innerHTML=html;
 }
 
 /* ================= LOGIN ================= */
-function loginScreen(){
+function login(){
 
 render(`
 <div class="screen">
   <h1>⚡ TYMERZ</h1>
 
-  <input id="username" placeholder="username">
-  <input id="password" type="password" placeholder="password">
+  <input id="u" placeholder="username">
+  <input id="p" type="password" placeholder="password">
 
-  <button onclick="login()">Connexion</button>
   <button onclick="signup()">Créer compte</button>
+  <button onclick="signin()">Connexion</button>
 </div>
 `);
 
 }
 
-window.login=async()=>{
+window.signin=async()=>{
 
-const username=document.getElementById("username").value;
-const password=document.getElementById("password").value;
+const username=document.getElementById("u").value;
+const password=document.getElementById("p").value;
 
 const { data } = await supabase
 .from("users")
@@ -159,7 +160,7 @@ const { data } = await supabase
 .single();
 
 if(!data){
-alert("Erreur login");
+alert("Identifiants incorrects");
 return;
 }
 
@@ -170,14 +171,17 @@ menu();
 
 window.signup=async()=>{
 
-const username=document.getElementById("username").value;
-const password=document.getElementById("password").value;
+const username=document.getElementById("u").value;
+const password=document.getElementById("p").value;
 
 const { error } = await supabase
 .from("users")
 .insert({username,password,score:0});
 
-if(error) return alert(error.message);
+if(error){
+alert(error.message);
+return;
+}
 
 alert("Compte créé !");
 };
@@ -200,24 +204,36 @@ window.start=()=>{
 
 game=0;
 score=0;
-rules();
+transition();
 
 };
+
+/* ================= TRANSITION ================= */
+function transition(){
+
+render(`
+<div class="screen">
+  <h2>Préparation...</h2>
+</div>
+`);
+
+setTimeout(()=>rules(),1200);
+
+}
 
 /* ================= RULES ================= */
 function rules(){
 
-const txt=[
+const r=[
 "⌛ Timing parfait",
-"⚡ Réflexe GO",
-"🔥 Spam click",
-"🎯 Click rapide",
-"⏱ Stop précis"
+"⚡ Réflexe",
+"🔥 Spam",
+"🎯 Click rapide"
 ];
 
 render(`
 <div class="screen">
-  <h2>${txt[game]}</h2>
+  <h2>${r[game]}</h2>
   <button onclick="play()">START</button>
 </div>
 `);
@@ -229,8 +245,6 @@ window.play=()=>gameEngine();
 /* ================= GAME ENGINE ================= */
 function gameEngine(){
 
-locked=false;
-
 /* GAME 1 */
 if(game===0){
 
@@ -238,15 +252,14 @@ let start=Date.now();
 
 render(`
 <div class="screen">
-  <h2>⌛ Clique à 5 secondes</h2>
+  <h2>⌛ SPACE au bon moment</h2>
   <div class="big">GO</div>
 </div>
 `);
 
 window.onkeydown=(e)=>{
 if(e.code==="Space"){
-let t=(Date.now()-start)/1000;
-score += 1000 - Math.abs(5-t)*200;
+score += 1000-Math.abs(5000-(Date.now()-start));
 next();
 }
 };
@@ -261,8 +274,7 @@ let start=0;
 
 render(`
 <div class="screen">
-  <h2>⚡ Attends le GO</h2>
-  <div class="big">WAIT</div>
+  <h2>⚡ ATTENDS GO</h2>
 </div>
 `);
 
@@ -289,38 +301,36 @@ next();
 
 }
 
-/* GAME 3 - SPAM */
+/* GAME 3 */
 if(game===2){
 
 let count=0;
 
 render(`
 <div class="screen">
-  <h2>🔥 SPAM LA ZONE</h2>
+  <h2>🔥 SPAM</h2>
 
   <div id="box" class="box">TAP</div>
-  <div id="counter">0</div>
+  <h1 id="c">0</h1>
 </div>
 `);
 
 const box=document.getElementById("box");
-const counter=document.getElementById("counter");
+const c=document.getElementById("c");
 
 box.onclick=()=>{
 count++;
-counter.innerText=count;
+c.innerText=count;
 };
 
 setTimeout(()=>{
-
 score += count*50;
 next();
-
 },5000);
 
 }
 
-/* GAME 4 - CLICK */
+/* GAME 4 */
 if(game===3){
 
 let clicks=0;
@@ -338,10 +348,8 @@ clicks++;
 };
 
 setTimeout(()=>{
-
 score += clicks*60;
 next();
-
 },5000);
 
 }
@@ -351,7 +359,6 @@ next();
 /* ================= NEXT ================= */
 async function next(){
 
-locked=true;
 game++;
 
 if(game>=4){
@@ -366,7 +373,7 @@ return;
 
 }
 
-setTimeout(()=>rules(),800);
+setTimeout(()=>rules(),1000);
 
 }
 
@@ -375,7 +382,9 @@ function end(){
 
 render(`
 <div class="screen">
-  <h1>🏆 ${Math.round(score)}</h1>
+  <h1>🏆 FIN</h1>
+  <h2>${Math.round(score)}</h2>
+
   <button onclick="menu()">MENU</button>
 </div>
 `);
