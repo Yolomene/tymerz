@@ -18,7 +18,6 @@ color:white;
 
 #root{width:100%;height:100%;}
 
-/* SCREEN */
 .screen{
 width:100%;
 height:100%;
@@ -35,7 +34,6 @@ h1{color:#00f0ff;font-size:48px;}
 h2{font-size:26px;}
 p{opacity:0.8}
 
-/* BUTTON */
 button{
 width:85%;
 height:80px;
@@ -48,7 +46,6 @@ background:linear-gradient(90deg,#00f0ff,#7b61ff);
 color:white;
 }
 
-/* INPUT */
 input{
 width:80%;
 height:50px;
@@ -57,7 +54,6 @@ font-size:18px;
 margin:5px;
 }
 
-/* BOX */
 .box{
 width:85%;
 height:260px;
@@ -68,7 +64,6 @@ background:rgba(0,255,255,0.06);
 overflow:hidden;
 }
 
-/* TARGET */
 .target{
 width:40px;
 height:40px;
@@ -79,7 +74,6 @@ box-shadow:0 0 15px #00f0ff;
 cursor:pointer;
 }
 
-/* HOLD BUTTON */
 .bigCircle{
 width:180px;
 height:180px;
@@ -88,16 +82,6 @@ background:gray;
 box-shadow:0 0 25px black;
 }
 
-/* LIGHT */
-.light{
-width:120px;
-height:120px;
-border-radius:50%;
-background:red;
-box-shadow:0 0 40px red;
-}
-
-/* BIG TEXT */
 .big{font-size:55px;color:#00f0ff;}
 
 </style>
@@ -118,7 +102,7 @@ let score=0;
 let user=null;
 let inputLocked=false;
 
-/* ================= SPACE FIX ================= */
+/* SPACE FIX GLOBAL */
 document.addEventListener("keydown",(e)=>{
 if(e.code==="Space") e.preventDefault();
 },{passive:false});
@@ -158,7 +142,6 @@ window.login=()=>{
 let u=document.getElementById("u").value;
 let p=document.getElementById("p").value;
 
-/* ADMIN */
 if(p==="TYMERZ2026"){
 user="ADMIN";
 localStorage.setItem("tymerz_user",user);
@@ -166,7 +149,6 @@ menu();
 return;
 }
 
-/* USER */
 if(!u || u.length<2) return;
 
 user=u;
@@ -231,11 +213,11 @@ function intro(){
 reset();
 
 const txt=[
-"HOLD SPACE",
+"HOLD 5 SECONDES",
 "FEU VERT",
-"HOLD 9 SECONDES",
+"TOGGLE 9 SECONDES",
 "SPAM",
-"CIBLES HARD"
+"CIBLES"
 ];
 
 render(`
@@ -272,7 +254,12 @@ let start=0;
 let holding=false;
 let timer;
 
-render(`<div class="screen"><h2>MAINTIENS SPACE</h2></div>`);
+render(`
+<div class="screen">
+<h2>MAINTIENS SPACE</h2>
+<p>Objectif : 5 secondes</p>
+</div>
+`);
 
 window.onkeydown=(e)=>{
 
@@ -284,7 +271,7 @@ start=Date.now();
 
 timer=setTimeout(()=>{
 score=1000;
-endGame();
+endGame("perfect 5s");
 },5000);
 }
 
@@ -315,17 +302,16 @@ let start=0;
 render(`
 <div class="screen">
 <h2>ATTENDS VERT</h2>
-<div class="light"></div>
+<div class="bigCircle"></div>
 </div>
 `);
 
-const light=document.querySelector(".light");
+const c=document.querySelector(".bigCircle");
 
 window.onkeydown=(e)=>{
 
 if(e.code!=="Space") return;
 if(!green) return;
-if(inputLocked) return;
 
 score=Math.max(0,1000-(Date.now()-start));
 endGame();
@@ -337,47 +323,40 @@ setTimeout(()=>{
 green=true;
 start=Date.now();
 
-light.style.background="green";
-light.style.boxShadow="0 0 40px green";
+c.style.background="green";
 
 },1500);
 
 }
 
-/* ================= GAME 3 (FIXED HOLD 9s) ================= */
+/* ================= GAME 3 FIXED TOGGLE ================= */
 function game3(){
 
-let holding=false;
+let running=false;
 let start=0;
 
 render(`
 <div class="screen">
-<h2>⏱ HOLD 9 SECONDES</h2>
+<h2>⏱ TOGGLE 9 SECONDES</h2>
 
 <div id="btn" class="bigCircle"></div>
 
-<p>MAINTIENS puis relâche</p>
+<p>SPACE = start / stop</p>
 </div>
 `);
 
 const btn=document.getElementById("btn");
 
-btn.onmousedown=()=>{
+function toggle(){
 
 if(inputLocked) return;
 
-holding=true;
+if(!running){
+running=true;
 start=Date.now();
-
 btn.style.background="green";
-
-};
-
-btn.onmouseup=()=>{
-
-if(!holding) return;
-
-holding=false;
+}else{
+running=false;
 
 let t=Date.now()-start;
 
@@ -386,11 +365,15 @@ let diff=Math.abs(t-9000);
 score=Math.max(0,1000-(diff/8));
 
 endGame(`⏱ ${(t/1000).toFixed(2)}s`);
+}
 
+}
+
+window.onkeydown=(e)=>{
+if(e.code==="Space") toggle();
 };
 
-btn.ontouchstart=btn.onmousedown;
-btn.ontouchend=btn.onmouseup;
+btn.onclick=toggle;
 
 }
 
@@ -406,12 +389,10 @@ render(`
 
 <div class="box"></div>
 <h1 id="c">0</h1>
-<p id="info">0 CPS</p>
 </div>
 `);
 
 const c=document.getElementById("c");
-const info=document.getElementById("info");
 
 window.onclick=()=>{if(!inputLocked){count++;c.innerText=count;}};
 
@@ -422,18 +403,7 @@ c.innerText=count;
 }
 };
 
-let i=setInterval(()=>{
-
-let t=(Date.now()-start)/1000;
-let cps=count/t;
-
-info.innerText=`${cps.toFixed(2)} CPS`;
-
-},100);
-
 setTimeout(()=>{
-
-clearInterval(i);
 
 let t=(Date.now()-start)/1000;
 let cps=count/t;
@@ -565,12 +535,21 @@ render(`
 
 }
 
-/* ================= LEADERBOARD ================= */
+/* ================= LEADERBOARD FIX ================= */
 function saveScore(){
 
-let board=JSON.parse(localStorage.getItem("board")||"[]");
+let board=[];
 
-board.push({user,total});
+try{
+board=JSON.parse(localStorage.getItem("board")||"[]");
+}catch(e){
+board=[];
+}
+
+board.push({
+user:user||"guest",
+total:total
+});
 
 board.sort((a,b)=>b.total-a.total);
 
@@ -582,14 +561,22 @@ localStorage.setItem("board",JSON.stringify(board));
 
 function showBoard(){
 
-let board=JSON.parse(localStorage.getItem("board")||"[]");
+let board=[];
+
+try{
+board=JSON.parse(localStorage.getItem("board")||"[]");
+}catch(e){
+board=[];
+}
 
 render(`
 <div class="screen">
 <h2>🏆 CLASSEMENT</h2>
 
 ${board.length
-? board.map((b,i)=>`<p>${i+1}. ${b.user} - ${b.total}</p>`).join("")
+? board.map((b,i)=>`
+<p>${i+1}. ${b.user} — ${b.total}</p>
+`).join("")
 : "<p>Aucun score</p>"
 }
 
