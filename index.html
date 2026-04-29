@@ -16,25 +16,8 @@ overflow:hidden;
 color:white;
 }
 
-#root{
-width:100%;
-height:100%;
-}
+#root{width:100%;height:100%;}
 
-/* ================= HUD ================= */
-.hud{
-position:absolute;
-top:20px;
-left:0;
-width:100%;
-display:flex;
-justify-content:space-between;
-padding:0 20px;
-font-size:18px;
-opacity:0.9;
-}
-
-/* ================= SCREEN ================= */
 .screen{
 width:100%;
 height:100%;
@@ -47,25 +30,24 @@ background:radial-gradient(circle,#0a0a12,#050507);
 position:relative;
 }
 
-h1{color:#00f0ff;font-size:50px;}
+h1{color:#00f0ff;font-size:48px;}
 h2{font-size:26px;}
 
 button{
 width:85%;
-height:85px;
+height:80px;
 margin:10px;
 border:none;
-border-radius:20px;
+border-radius:18px;
 font-size:20px;
 font-weight:bold;
 background:linear-gradient(90deg,#00f0ff,#7b61ff);
 color:white;
 }
 
-/* ================= GAME UI ================= */
 .box{
 width:85%;
-height:280px;
+height:260px;
 border-radius:20px;
 border:2px solid #00f0ff;
 position:relative;
@@ -91,13 +73,24 @@ background:red;
 box-shadow:0 0 40px red;
 }
 
-.big{font-size:60px;color:#00f0ff;}
+.hud{
+position:absolute;
+top:10px;
+left:0;
+width:100%;
+display:flex;
+justify-content:space-between;
+padding:0 20px;
+font-size:14px;
+opacity:0.8;
+}
+
+.big{font-size:55px;color:#00f0ff;}
 
 </style>
 </head>
 
 <body>
-
 <div id="root"></div>
 
 <script type="module">
@@ -107,10 +100,11 @@ const root=document.getElementById("root");
 let gameIndex=0;
 let total=0;
 let score=0;
-let canPlay=false;
+
+let user=null;
 let inputLocked=false;
 
-/* ================= GLOBAL SPACE FIX ================= */
+/* SPACE FIX GLOBAL */
 document.addEventListener("keydown",(e)=>{
 if(e.code==="Space") e.preventDefault();
 },{passive:false});
@@ -120,32 +114,75 @@ function render(html){
 root.innerHTML=html;
 }
 
-/* ================= RESET ================= */
+/* ================= RESET INPUT ================= */
 function reset(){
 window.onkeydown=null;
 window.onkeyup=null;
 inputLocked=false;
 }
 
-/* ================= MENU ================= */
+/* ================= BOOT ================= */
+boot();
+
+function boot(){
+
+user=localStorage.getItem("tymerz_user");
+
+if(!user){
+loginScreen();
+}else{
+menu();
+}
+
+}
+
+/* ================= LOGIN ================= */
+function loginScreen(){
+
+render(`
+<div class="screen">
+<h1>⚡ TYMERZ</h1>
+
+<input id="u" placeholder="username" style="width:80%;height:50px;font-size:18px;text-align:center;">
+
+<button onclick="login()">Connexion</button>
+</div>
+`);
+
+}
+
+window.login=()=>{
+
+let u=document.getElementById("u").value;
+
+if(!u || u.length<2) return;
+
+localStorage.setItem("tymerz_user",u);
+
 menu();
 
+};
+
+/* ================= MENU ================= */
 function menu(){
 
 reset();
 
 render(`
 <div class="screen">
-  <h1>⚡ TYMERZ</h1>
+<h1>⚡ TYMERZ</h1>
 
-  <button onclick="startGame()">JOUER</button>
+<p>${user}</p>
+
+<button onclick="start()">JOUER</button>
+<button onclick="showBoard()">CLASSEMENT</button>
 </div>
 `);
 
 }
 
 /* ================= START ================= */
-window.startGame=()=>{
+window.start=()=>{
 gameIndex=0;
 total=0;
 next();
@@ -162,33 +199,31 @@ function intro(){
 reset();
 
 const txt=[
-"⌛ HOLD SPACE 5s",
-"⚡ Feu rouge → vert",
-"⏱ DOUBLE SPACE 9s",
-"🔥 SPAM CLICK",
-"🎯 Cibles rapides"
+"HOLD SPACE 5s",
+"FEU ROUGE → VERT",
+"DOUBLE SPACE 9s",
+"SPAM CLICK",
+"CIBLES"
 ];
 
 render(`
 <div class="screen">
-  <h2>${txt[gameIndex]}</h2>
-
-  <button onclick="start()">START</button>
+<h2>${txt[gameIndex]}</h2>
+<button onclick="startGame()">START</button>
 </div>
 `);
 
 window.onkeydown=(e)=>{
-if(e.code==="Space") start();
+if(e.code==="Space") startGame();
 };
 
 }
 
-/* ================= START ================= */
-window.start=()=>{
+/* ================= START GAME ================= */
+window.startGame=()=>{
 
 reset();
 score=0;
-canPlay=true;
 
 if(gameIndex===0) game1();
 if(gameIndex===1) game2();
@@ -198,18 +233,6 @@ if(gameIndex===4) game5();
 
 };
 
-/* ================= HUD ================= */
-function hud(timer="0.00"){
-
-return `
-<div class="hud">
-  <div>Score: ${Math.round(total)}</div>
-  <div>⏱ ${timer}s</div>
-</div>
-`;
-
-}
-
 /* ================= GAME 1 HOLD ================= */
 function game1(){
 
@@ -217,11 +240,11 @@ let start=0;
 let holding=false;
 let timer;
 
-render(`<div class="screen">${hud("0.00")}<h2>MAINTIENS SPACE</h2></div>`);
+render(`<div class="screen"><h2>MAINTIENS SPACE 5s</h2></div>`);
 
 window.onkeydown=(e)=>{
 
-if(e.code!=="Space" || inputLocked) return;
+if(e.code!=="Space") return;
 
 if(!holding){
 holding=true;
@@ -229,7 +252,7 @@ start=Date.now();
 
 timer=setTimeout(()=>{
 score=1000;
-endGame("perfect 5.00s");
+endGame();
 },5000);
 }
 
@@ -237,16 +260,16 @@ endGame("perfect 5.00s");
 
 window.onkeyup=(e)=>{
 
-if(e.code!=="Space" || !holding) return;
+if(e.code!=="Space") return;
 
 clearTimeout(timer);
 
-let t=(Date.now()-start);
+let t=Date.now()-start;
 
-let s=1-Math.abs(5000-t)/5000;
-score=Math.max(0,Math.min(1000,s*1000));
+score=Math.max(0,1000-(Math.abs(5000-t)/5));
 
-endGame(`temps: ${(t/1000).toFixed(2)}s`);
+endGame(`⏱ ${(t/1000).toFixed(2)}s`);
+
 };
 
 }
@@ -257,18 +280,22 @@ function game2(){
 let green=false;
 let start=0;
 
-render(`<div class="screen">${hud("0.00")}<h2>ATTENDS VERT</h2><div class="light"></div></div>`);
+render(`
+<div class="screen">
+<h2>ATTENDS VERT</h2>
+<div class="light"></div>
+</div>
+`);
 
 const light=document.querySelector(".light");
 
 window.onkeydown=(e)=>{
 
-if(e.code!=="Space" || inputLocked) return;
+if(e.code!=="Space") return;
 if(!green) return;
 
-let t=Date.now()-start;
-score=Math.max(0,1000-t);
-endGame(`${(t/1000).toFixed(2)}s`);
+score=Math.max(0,1000-(Date.now()-start));
+endGame();
 
 };
 
@@ -291,19 +318,17 @@ let started=false;
 let start=0;
 let waiting=false;
 
-render(`<div class="screen">${hud("0.00")}<h2>SPACE → attendre 9s → SPACE</h2></div>`);
+render(`<div class="screen"><h2>SPACE → 9s → SPACE</h2></div>`);
 
 window.onkeydown=(e)=>{
 
-if(e.code!=="Space" || inputLocked) return;
+if(e.code!=="Space") return;
 
 if(!started){
 
 started=true;
 start=Date.now();
 waiting=true;
-
-render(`<div class="screen">${hud("0.00")}<h2>ATTENDS 9s</h2></div>`);
 
 setTimeout(()=>waiting=false,9000);
 
@@ -316,7 +341,7 @@ let t=Date.now()-start;
 
 score=Math.max(0,1000-(Math.abs(t-9000)/10));
 
-endGame(`${(t/1000).toFixed(2)}s`);
+endGame(`⏱ ${(t/1000).toFixed(2)}s`);
 
 }
 
@@ -324,7 +349,7 @@ endGame(`${(t/1000).toFixed(2)}s`);
 
 }
 
-/* ================= GAME 4 SPAM (FIXED BACK) ================= */
+/* ================= GAME 4 SPAM + CPS ================= */
 function game4(){
 
 let count=0;
@@ -332,18 +357,18 @@ let start=Date.now();
 
 render(`
 <div class="screen">
-${hud("0.00")}
-<h2>🔥 SPAM CLICK</h2>
+<h2>🔥 SPAM</h2>
 
-<div class="box" id="box"></div>
+<div class="box"></div>
 <h1 id="c">0</h1>
+<p id="info">0 CPS | 0.00s</p>
 </div>
 `);
 
-const box=document.getElementById("box");
 const c=document.getElementById("c");
+const info=document.getElementById("info");
 
-box.onclick=()=>{if(!inputLocked){count++;c.innerText=count;}};
+window.onclick=()=>{if(!inputLocked){count++;c.innerText=count;}};
 
 window.onkeydown=(e)=>{
 if(e.code==="Space" && !inputLocked){
@@ -352,10 +377,25 @@ c.innerText=count;
 }
 };
 
+let i=setInterval(()=>{
+
+let t=(Date.now()-start)/1000;
+let cps=count/t;
+
+info.innerText=`${cps.toFixed(2)} CPS | ${t.toFixed(2)}s`;
+
+},100);
+
 setTimeout(()=>{
 
-score=Math.min(1000,count*50);
-endGame(`${((Date.now()-start)/1000).toFixed(2)}s`);
+clearInterval(i);
+
+let t=(Date.now()-start)/1000;
+let cps=count/t;
+
+score=Math.min(1000,cps*120);
+
+endGame(`🔥 ${count} clicks`);
 
 },5000);
 
@@ -365,12 +405,10 @@ endGame(`${((Date.now()-start)/1000).toFixed(2)}s`);
 function game5(){
 
 let hits=0;
-let start=Date.now();
 
 render(`
 <div class="screen">
-${hud("0.00")}
-<h2>🎯 CLIC CIBLES</h2>
+<h2>🎯 CIBLES</h2>
 
 <div class="box" id="arena"></div>
 <h1 id="h">0</h1>
@@ -402,7 +440,7 @@ t.remove();
 
 if(hits===5){
 score=1000;
-endGame("perfect clear");
+endGame("perfect");
 }
 
 };
@@ -430,21 +468,20 @@ endGame("timeout");
 function endGame(detail=""){
 
 inputLocked=true;
-reset();
 
 total+=score;
 
 render(`
 <div class="screen">
-  <h2>Score épreuve</h2>
+<h2>Score</h2>
 
-  <h1 class="big">${Math.round(score)}</h1>
+<h1 class="big">${Math.round(score)}</h1>
 
-  <p>${detail}</p>
+<p>${detail}</p>
 
-  <p>Total: ${total}/5000</p>
+<p>Total: ${total}/5000</p>
 
-  <button onclick="nextGame()">SUIVANT</button>
+<button onclick="nextGame()">SUIVANT</button>
 </div>
 `);
 
@@ -466,14 +503,48 @@ next();
 /* ================= FINAL ================= */
 function final(){
 
+saveScore();
+
 render(`
 <div class="screen">
-  <h1>🏆 FIN</h1>
+<h1>🏆 FIN</h1>
 
-  <h2>${total}/5000</h2>
+<h2>${total}/5000</h2>
 
-  <button onclick="menu()">CLASSEMENT</button>
-  <button onclick="startGame()">REJOUER</button>
+<button onclick="menu()">MENU</button>
+<button onclick="start()">REJOUER</button>
+<button onclick="showBoard()">CLASSEMENT</button>
+</div>
+`);
+
+}
+
+/* ================= LEADERBOARD ================= */
+function saveScore(){
+
+let board=JSON.parse(localStorage.getItem("board")||"[]");
+
+board.push({user,total,date:Date.now()});
+
+board.sort((a,b)=>b.total-a.total);
+
+board=board.slice(0,10);
+
+localStorage.setItem("board",JSON.stringify(board));
+
+}
+
+function showBoard(){
+
+let board=JSON.parse(localStorage.getItem("board")||"[]");
+
+render(`
+<div class="screen">
+<h2>🏆 CLASSEMENT</h2>
+
+${board.map((b,i)=>`<p>${i+1}. ${b.user} - ${b.total}</p>`).join("")}
+
+<button onclick="menu()">BACK</button>
 </div>
 `);
 
