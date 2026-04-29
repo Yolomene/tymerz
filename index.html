@@ -2,82 +2,73 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>TYmerz DEBUG</title>
+<title>Supabase TEST</title>
 
 <script type="module">
 
-/* ================= SUPABASE IMPORT ================= */
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 /* ================= CONFIG ================= */
 const SUPABASE_URL = "https://lsgrfmweasnjzkwzhnys.supabase.co";
 const SUPABASE_KEY = "COLLE_TA_ANON_KEY_ICI";
 
-console.log("🚀 START DEBUG SUPABASE");
-console.log("URL:", SUPABASE_URL);
-console.log("KEY (preview):", SUPABASE_KEY.slice(0,25) + "...");
-
 /* ================= INIT ================= */
+console.log("🚀 START TEST");
+
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
-console.log("✅ CLIENT CREATED");
+console.log("🔑 KEY START:", SUPABASE_KEY.slice(0,20));
+console.log("🔢 KEY LENGTH:", SUPABASE_KEY.length);
 
-/* ================= FULL TEST ================= */
-async function fullTest(){
+/* ================= TEST CONNECTION ================= */
+async function test(){
 
-  console.log("🧪 TEST 1: BASIC CONNECTION...");
+  console.log("🧪 TEST 1: BASIC AUTH CHECK");
 
-  try {
-    const { data, error } = await supabase.auth.getSession();
-    console.log("AUTH SESSION:", data, error);
-  } catch (e) {
-    console.log("❌ AUTH ERROR:", e);
-  }
+  const auth = await supabase.auth.getSession();
+  console.log("AUTH RESULT:", auth);
 
-  console.log("🧪 TEST 2: TABLE USERS...");
+  console.log("🧪 TEST 2: TABLE USERS SELECT");
 
-  const res = await supabase
+  const { data, error } = await supabase
     .from("users")
     .select("*")
     .limit(1);
 
-  console.log("📦 USERS DATA:", res.data);
-  console.log("❌ USERS ERROR:", res.error);
+  console.log("DATA:", data);
+  console.log("ERROR:", error);
 
-  console.log("🧪 TEST 3: INSERT TEST (SAFE)...");
+  console.log("🧪 TEST 3: INSERT TEST");
 
-  const testInsert = await supabase
+  const insert = await supabase
     .from("users")
     .insert({
-      username: "debug_user",
+      username: "test_user",
       password: "1234",
       score: 0
     })
     .select();
 
-  console.log("📥 INSERT RESULT:", testInsert.data);
-  console.log("❌ INSERT ERROR:", testInsert.error);
+  console.log("INSERT:", insert.data);
+  console.log("INSERT ERROR:", insert.error);
 
 }
 
-/* run test */
-fullTest();
+test();
 
 </script>
 
 </head>
 
-<body style="background:#0a0a0a;color:white;font-family:Arial;padding:20px">
+<body style="background:#111;color:white;font-family:Arial;padding:20px">
 
-<h1>TYMERZ DEBUG MODE</h1>
-
+<h1>SUPABASE TEST MODE</h1>
 <p>Ouvre la console (F12 → Console)</p>
 
 <ul>
-<li>Test 1 = connexion Supabase</li>
-<li>Test 2 = lecture table users</li>
-<li>Test 3 = insertion test</li>
+<li>Test 1 = auth</li>
+<li>Test 2 = lecture table</li>
+<li>Test 3 = insertion</li>
 </ul>
 
 </body>
