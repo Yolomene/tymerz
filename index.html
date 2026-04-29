@@ -2,8 +2,8 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<title>TYMERZ</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TYMERZ</title>
 
 <script type="module">
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
@@ -14,212 +14,75 @@ const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
-/* ================= AUDIO ================= */
-const sfx = {
-  click: new Audio("https://actions.google.com/sounds/v1/cartoon/pop.ogg"),
-  start: new Audio("https://actions.google.com/sounds/v1/cartoon/wood_plank_flicks.ogg"),
-  success: new Audio("https://actions.google.com/sounds/v1/cartoon/clang_and_wobble.ogg")
-};
-
 /* ================= STATE ================= */
 let user=null;
-let step=-1;
 let game=0;
 let score=0;
 
 /* ================= UI ================= */
-const app=document.getElementById("app");
+const app = document.getElementById("app");
 
-/* ================= RANK ================= */
-function getRank(s){
-  if(s<1000) return "Bronze";
-  if(s<3000) return "Silver";
-  if(s<6000) return "Gold";
-  if(s<10000) return "Platinum";
-  return "Legend";
-}
-
-/* ================= AUTH ================= */
+/* ================= AUTH FIX PROPRE ================= */
 async function login(){
-  const u=username.value;
-  const p=password.value;
 
-  const { data } = await supabase
+  const u = document.getElementById("username").value;
+  const p = document.getElementById("password").value;
+
+  const { data, error } = await supabase
     .from("users")
     .select("*")
-    .eq("username",u)
-    .eq("password",p);
+    .eq("username", u)
+    .eq("password", p);
 
-  if(!data.length) return alert("Erreur");
+  if(error || !data.length){
+    alert("Identifiants incorrects");
+    return;
+  }
 
-  user=data[0];
+  user = data[0];
   menu();
 }
 
 async function signup(){
-  await supabase.from("users").insert({
-    username:username.value,
-    password:password.value,
-    score:0
-  });
-  alert("Compte créé");
-}
 
-/* ================= SAVE ================= */
-async function save(){
-  await supabase
+  const u = document.getElementById("username").value;
+  const p = document.getElementById("password").value;
+
+  const { error } = await supabase
     .from("users")
-    .update({ score })
-    .eq("username",user.username);
-}
+    .insert({ username:u, password:p, score:0 });
 
-/* ================= FLOW ================= */
-function menu(){
-  step=0;
-  renderMenu();
-}
-
-/* ================= SCREENS ================= */
-function renderMenu(){
-  app.innerHTML=`
-  <div class="card">
-    <h1>⚡ TYMERZ</h1>
-    <button onclick="nextScreen()">Jouer</button>
-    <button onclick="leaderboard()">Leaderboard</button>
-  </div>`;
-}
-
-window.nextScreen=()=>rules();
-
-/* ================= RULE SCREEN ================= */
-function rules(){
-  sfx.start.play();
-
-  const rules=[
-    "⌛ 5 secondes parfaites",
-    "⚡ Réflexe GO",
-    "⏱ Stop parfait",
-    "🔥 Spam ESPACE",
-    "🎯 Click rapide"
-  ];
-
-  app.innerHTML=`
-  <div class="card">
-    <h2>${rules[game]}</h2>
-    <p>Appuie sur ESPACE pour commencer</p>
-    <button onclick="startGame()">START</button>
-  </div>`;
-}
-
-window.startGame=()=>runGame();
-
-/* ================= GAMES ================= */
-function runGame(){
-
-  sfx.click.play();
-
-  app.innerHTML="<div class='glow'>GO</div>";
-
-  setTimeout(()=>{
-    gamePlay();
-  },500);
-}
-
-/* ================= GAME ENGINE ================= */
-function gamePlay(){
-
-  let start=Date.now();
-
-  if(game===0){
-    window.onkeydown=(e)=>{
-      if(e.code==="Space"){
-        const t=(Date.now()-start)/1000;
-        score+=Math.max(0,1000-Math.abs(5-t)*200);
-        next();
-      }
-    };
-  }
-
-  if(game===1){
-    let go=false;
-
-    setTimeout(()=>{
-      go=true;
-      start=Date.now();
-      app.innerHTML="<div class='glow'>GO!</div>";
-    },2000);
-
-    window.onkeydown=(e)=>{
-      if(e.code==="Space" && go){
-        score+=1000-(Date.now()-start);
-        next();
-      }
-    };
-  }
-
-  if(game===2){
-    window.onkeydown=(e)=>{
-      if(e.code==="Space"){
-        const t=(Date.now()-start)/1000;
-        score+=1000-Math.abs(10-t)*100;
-        next();
-      }
-    };
-  }
-
-  if(game===3){
-    let c=0;
-    window.onkeydown=()=>c++;
-
-    setTimeout(()=>{
-      score+=c*40;
-      next();
-    },5000);
-  }
-
-  if(game===4){
-    let clicks=0;
-
-    app.innerHTML="CLICK!";
-
-    window.onclick=()=>clicks++;
-
-    setTimeout(()=>{
-      score+=clicks*60;
-      next();
-    },5000);
-  }
-}
-
-/* ================= NEXT ================= */
-function next(){
-  sfx.success.play();
-  save();
-  game++;
-
-  if(game>=5){
-    result();
+  if(error){
+    alert(error.message);
     return;
   }
 
-  rules();
+  alert("Compte créé !");
 }
 
-/* ================= RESULT ================= */
-async function result(){
+/* ================= SAVE SCORE ================= */
+async function save(){
+  if(!user) return;
+  await supabase
+    .from("users")
+    .update({ score })
+    .eq("username", user.username);
+}
 
-  const rank=getRank(score);
-
+/* ================= NAV ================= */
+function menu(){
   app.innerHTML=`
-  <div class="card">
-    <h2>🏆 Score ${score}</h2>
-    <h3>Rank: ${rank}</h3>
-    <button onclick="location.reload()">Rejouer</button>
-  </div>`;
+    <div class="card">
+      <h1>⚡ TYMERZ</h1>
+      <button onclick="startGame()">Jouer</button>
+      <button onclick="showLeaderboard()">Leaderboard</button>
+    </div>
+  `;
 }
 
-/* ================= LEADERBOARD LIVE ================= */
-async function leaderboard(){
+window.startGame = ()=>rules();
+
+window.showLeaderboard = async ()=>{
 
   const { data } = await supabase
     .from("users")
@@ -227,15 +90,137 @@ async function leaderboard(){
     .order("score",{ascending:false})
     .limit(10);
 
-  app.innerHTML=
-    "<div class='card'><h2>Leaderboard</h2>"+
-    data.map(u=>`<p>${u.username} - ${u.score}</p>`).join("")+
-    "</div>";
+  app.innerHTML = `
+    <div class="card">
+      <h2>🏆 Leaderboard</h2>
+      ${data.map(u=>`
+        <p>${u.username} — ${u.score}</p>
+      `).join("")}
+      <button onclick="menu()">Retour</button>
+    </div>
+  `;
+};
+
+/* ================= RULE SCREEN ================= */
+function rules(){
+
+  const texts=[
+    "⌛ Maintiens 5 secondes",
+    "⚡ Réflexe GO",
+    "⏱ Stop parfait",
+    "🔥 Spam ESPACE",
+    "🎯 Click rapide"
+  ];
+
+  app.innerHTML=`
+    <div class="card">
+      <h2>${texts[game]}</h2>
+      <p>Appuie sur ESPACE pour commencer</p>
+      <button onclick="play()">START</button>
+    </div>
+  `;
 }
 
-/* ================= LOGIN INIT ================= */
-window.signup=signup;
+/* ================= GAME ENGINE ================= */
+function play(){
+
+  let start = Date.now();
+
+  app.innerHTML="<div class='glow'>GO</div>";
+
+  setTimeout(()=>{
+
+    if(game===0){
+      window.onkeydown=(e)=>{
+        if(e.code==="Space"){
+          const t=(Date.now()-start)/1000;
+          score += 1000 - Math.abs(5-t)*200;
+          next();
+        }
+      };
+    }
+
+    if(game===1){
+      let go=false;
+
+      setTimeout(()=>{
+        go=true;
+        start=Date.now();
+        app.innerHTML="<div class='glow'>GO!</div>";
+      },1500);
+
+      window.onkeydown=(e)=>{
+        if(e.code==="Space" && go){
+          score += 1000-(Date.now()-start);
+          next();
+        }
+      };
+    }
+
+    if(game===2){
+      window.onkeydown=(e)=>{
+        if(e.code==="Space"){
+          const t=(Date.now()-start)/1000;
+          score += 1000 - Math.abs(10-t)*100;
+          next();
+        }
+      };
+    }
+
+    if(game===3){
+      let c=0;
+      window.onkeydown=()=>c++;
+
+      setTimeout(()=>{
+        score += c*40;
+        next();
+      },5000);
+    }
+
+    if(game===4){
+      let clicks=0;
+
+      app.innerHTML="<div class='glow'>CLICK!</div>";
+
+      window.onclick=()=>clicks++;
+
+      setTimeout(()=>{
+        score += clicks*60;
+        next();
+      },5000);
+    }
+
+  },300);
+}
+
+/* ================= NEXT ================= */
+function next(){
+  save();
+  game++;
+
+  if(game>=5){
+    end();
+    return;
+  }
+
+  rules();
+}
+
+/* ================= END ================= */
+function end(){
+
+  app.innerHTML=`
+    <div class="card">
+      <h2>🏆 Score : ${Math.round(score)}</h2>
+      <button onclick="location.reload()">Rejouer</button>
+    </div>
+  `;
+}
+
+/* expose */
 window.login=login;
+window.signup=signup;
+window.menu=menu;
 
 </script>
 
@@ -243,47 +228,53 @@ window.login=login;
 
 body{
 margin:0;
-overflow:hidden;
-background:#050510;
+height:100vh;
+display:flex;
+justify-content:center;
+align-items:center;
+background:radial-gradient(circle,#0a0a12,#050507);
 color:white;
 font-family:Arial;
-}
-
-canvas{
-position:fixed;
-top:0;
-left:0;
-z-index:-1;
+overflow:hidden;
 }
 
 .card{
-background:rgba(255,255,255,0.05);
-padding:20px;
+background:rgba(255,255,255,0.06);
+padding:25px;
 border-radius:20px;
 backdrop-filter:blur(20px);
+width:320px;
 text-align:center;
-width:300px;
-margin:auto;
-margin-top:15%;
+box-shadow:0 0 40px rgba(0,255,255,0.08);
+}
+
+input{
+width:100%;
+margin:5px 0;
+padding:10px;
+border-radius:10px;
+border:none;
+background:#111;
+color:white;
 }
 
 button{
 width:100%;
 padding:10px;
-margin:5px;
-border-radius:10px;
+margin-top:5px;
 border:none;
+border-radius:10px;
+cursor:pointer;
 background:linear-gradient(90deg,#00f0ff,#7b61ff);
 color:white;
-cursor:pointer;
+font-weight:bold;
 }
 
 .glow{
 font-size:40px;
-text-align:center;
 color:#00f0ff;
 text-shadow:0 0 20px #00f0ff;
-animation:pop .3s;
+animation:pop .3s ease;
 }
 
 @keyframes pop{
@@ -297,15 +288,18 @@ to{transform:scale(1);opacity:1}
 
 <body>
 
-<canvas id="bg"></canvas>
-
 <div class="card">
 <h1>⚡ TYMERZ</h1>
-<input id="username" placeholder="pseudo">
-<input id="password" type="password" placeholder="password">
-<button onclick="signup()">Créer</button>
+
+<input id="username" placeholder="Pseudo">
+<input id="password" type="password" placeholder="Mot de passe">
+
+<button onclick="signup()">Créer compte</button>
 <button onclick="login()">Connexion</button>
+
 </div>
+
+<div id="app"></div>
 
 </body>
 </html>
