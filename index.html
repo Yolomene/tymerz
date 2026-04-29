@@ -1,27 +1,370 @@
 <!DOCTYPE html>
-<html>
+<html lang="fr">
 <head>
-<meta charset="UTF-8">
-<title>TEST TYMERZ</title>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>TYMERZ ENGINE</title>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+
+<style>
+html,body{
+margin:0;
+height:100%;
+background:#050510;
+font-family:Arial;
+overflow:hidden;
+color:white;
+}
+
+#root{width:100%;height:100%;}
+
+.screen{
+width:100%;
+height:100%;
+display:flex;
+flex-direction:column;
+justify-content:center;
+align-items:center;
+text-align:center;
+background:radial-gradient(circle,#0a0a12,#050507);
+}
+
+button{
+width:85%;
+height:80px;
+margin:10px;
+border:none;
+border-radius:18px;
+font-size:20px;
+background:#00f0ff;
+color:black;
+font-weight:bold;
+}
+
+.box{
+width:85%;
+height:250px;
+border:2px solid #00f0ff;
+border-radius:20px;
+position:relative;
+}
+
+.target{
+width:40px;
+height:40px;
+border-radius:50%;
+background:#00f0ff;
+position:absolute;
+cursor:pointer;
+}
+
+.bigCircle{
+width:160px;
+height:160px;
+border-radius:50%;
+background:gray;
+}
+</style>
 </head>
-<body style="margin:0;background:#001a33;color:white;">
+
+<body>
 
 <div id="root"></div>
 
 <script>
-
+/* ================= SAFE BOOT ================= */
 const root = document.getElementById("root");
 
-function render(){
-root.innerHTML = `
-<div style="height:100vh;display:flex;align-items:center;justify-content:center;flex-direction:column;">
-<h1>TYMERZ OK</h1>
-<button onclick="alert('click OK')">TEST BUTTON</button>
-</div>
-`;
+let user = null;
+let game = 0;
+let total = 0;
+let score = 0;
+let holding = false;
+let startTime = 0;
+
+/* ================= RENDER SAFE ================= */
+function render(html){
+root.innerHTML = html;
 }
 
-render();
+/* ================= ERROR SAFE ================= */
+window.onerror = function(msg){
+console.log("ENGINE ERROR:", msg);
+render(`<div class="screen"><h1>ERROR</h1><p>${msg}</p></div>`);
+};
+
+/* ================= LOGIN ================= */
+function loginScreen(){
+render(`
+<div class="screen">
+<h1>TYMERZ</h1>
+<input id="u" placeholder="username" style="height:50px;width:80%;text-align:center;">
+<button onclick="login()">ENTER</button>
+</div>
+`);
+}
+
+window.login = ()=>{
+user = document.getElementById("u").value || "player";
+menu();
+};
+
+/* ================= MENU ================= */
+function menu(){
+render(`
+<div class="screen">
+<h1>TYMERZ</h1>
+<p>${user}</p>
+
+<button onclick="start()">PLAY</button>
+<button onclick="leaderboard()">LEADERBOARD</button>
+</div>
+`);
+}
+
+/* ================= START ================= */
+window.start = ()=>{
+game = 0;
+total = 0;
+next();
+};
+
+function next(){
+intro();
+}
+
+/* ================= INTRO ================= */
+function intro(){
+
+const names = [
+"HOLD SPACE 5s",
+"REACTION",
+"TOGGLE",
+"SPAM",
+"CIBLES"
+];
+
+render(`
+<div class="screen">
+<h2>${names[game]}</h2>
+<button onclick="startGame()">START</button>
+</div>
+`);
+}
+
+window.startGame = ()=>{
+if(game===0) g1();
+if(game===1) g2();
+if(game===2) g3();
+if(game===3) g4();
+if(game===4) g5();
+};
+
+/* ================= GAME 1 FIXED ================= */
+function g1(){
+
+holding = false;
+startTime = 0;
+
+render(`<div class="screen"><h2>HOLD SPACE 5s</h2></div>`);
+
+window.onkeydown = (e)=>{
+if(e.code!=="Space") return;
+
+if(!holding){
+holding = true;
+startTime = Date.now();
+}
+};
+
+window.onkeyup = (e)=>{
+if(e.code!=="Space") return;
+
+let t = Date.now() - startTime;
+
+score = Math.max(0, 1000 - Math.abs(5000 - t)/5);
+
+endGame();
+};
+
+}
+
+/* ================= GAME 2 ================= */
+function g2(){
+
+let green = false;
+let start = 0;
+
+render(`<div class="screen"><h2>WAIT GREEN</h2><div class="bigCircle"></div></div>`);
+
+setTimeout(()=>{
+green = true;
+start = Date.now();
+document.querySelector(".bigCircle").style.background="green";
+},1500);
+
+window.onkeydown = (e)=>{
+if(e.code!=="Space") return;
+if(!green) return;
+
+score = Math.max(0, 1000 - (Date.now()-start));
+endGame();
+};
+
+}
+
+/* ================= GAME 3 ================= */
+function g3(){
+
+let running = false;
+let start = 0;
+
+render(`<div class="screen"><h2>TOGGLE SPACE</h2></div>`);
+
+window.onkeydown = (e)=>{
+if(e.code!=="Space") return;
+
+if(!running){
+running = true;
+start = Date.now();
+}else{
+let t = Date.now() - start;
+score = Math.max(0, 1000 - Math.abs(9000 - t)/8);
+endGame();
+}
+};
+
+}
+
+/* ================= GAME 4 ================= */
+function g4(){
+
+let count = 0;
+let start = Date.now();
+
+render(`<div class="screen"><h2>SPAM CLICK</h2><h1 id="c">0</h1></div>`);
+
+window.onclick = ()=>{
+count++;
+document.getElementById("c").innerText = count;
+};
+
+setTimeout(()=>{
+score = Math.min(1000, count * 50);
+endGame();
+},5000);
+
+}
+
+/* ================= GAME 5 ================= */
+function g5(){
+
+let hits = 0;
+let needed = 6;
+let start = Date.now();
+
+render(`<div class="screen"><h2>CIBLES</h2><div class="box" id="box"></div></div>`);
+
+const box = document.getElementById("box");
+
+for(let i=0;i<needed;i++){
+
+const d = document.createElement("div");
+d.className = "target";
+
+d.style.left = Math.random()*80 + "%";
+d.style.top = Math.random()*80 + "%";
+
+d.onclick = ()=>{
+
+hits++;
+d.remove();
+
+if(hits === needed){
+let t = (Date.now() - start)/1000;
+score = Math.max(300, 1000 - t*300);
+endGame();
+}
+
+};
+
+box.appendChild(d);
+}
+
+}
+
+/* ================= END GAME ================= */
+function endGame(){
+
+total += score;
+
+render(`
+<div class="screen">
+<h2>SCORE</h2>
+<h1>${Math.round(score)}</h1>
+<p>TOTAL ${total}</p>
+
+<button onclick="nextGame()">NEXT</button>
+</div>
+`);
+}
+
+/* ================= NEXT ================= */
+window.nextGame = ()=>{
+game++;
+if(game >= 5) final();
+else next();
+};
+
+/* ================= FINAL ================= */
+function final(){
+
+saveLocal();
+
+render(`
+<div class="screen">
+<h1>FIN</h1>
+<h2>${total}</h2>
+
+<button onclick="menu()">MENU</button>
+<button onclick="start()">RETRY</button>
+</div>
+`);
+}
+
+/* ================= LEADERBOARD LOCAL (STABLE) ================= */
+function saveLocal(){
+
+let board = JSON.parse(localStorage.getItem("board") || "[]");
+
+board.push({user,total});
+
+board.sort((a,b)=>b.total-a.total);
+
+localStorage.setItem("board", JSON.stringify(board.slice(0,10)));
+
+}
+
+function leaderboard(){
+
+let board = JSON.parse(localStorage.getItem("board") || "[]");
+
+render(`
+<div class="screen">
+<h2>LEADERBOARD</h2>
+
+${board.map((b,i)=>`
+<p>${i+1}. ${b.user} - ${b.total}</p>
+`).join("")}
+
+<button onclick="menu()">BACK</button>
+</div>
+`);
+}
+
+/* ================= BOOT ================= */
+loginScreen();
 
 </script>
 
