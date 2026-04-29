@@ -19,29 +19,37 @@ let user = null;
 let game = -1;
 let total = 0;
 
-/* ================= UI HELPERS ================= */
+/* ================= DOM ================= */
 const $ = (id) => document.getElementById(id);
 
-/* ================= AUTH (username/password) ================= */
+/* ================= DEBUG ================= */
+window.onerror = (msg) => console.log("JS ERROR:", msg);
+
+/* ================= AUTH ================= */
 async function signup(){
   const username = $("username").value;
   const password = $("password").value;
 
-  let { data } = await supabase
-    .from("users")
-    .select("*")
-    .eq("username", username);
-
-  if(data.length > 0){
-    alert("Pseudo déjà pris");
+  if(!username || !password){
+    alert("Remplis tout");
     return;
   }
 
-  await supabase.from("users").insert({
-    username,
-    password,
-    score: 0
-  });
+  let { data, error } = await supabase
+    .from("users")
+    .insert({
+      username,
+      password,
+      score: 0
+    })
+    .select();
+
+  console.log("SIGNUP:", data, error);
+
+  if(error){
+    alert("Erreur signup: " + error.message);
+    return;
+  }
 
   alert("Compte créé !");
 }
@@ -50,11 +58,18 @@ async function login(){
   const username = $("username").value;
   const password = $("password").value;
 
-  let { data } = await supabase
+  let { data, error } = await supabase
     .from("users")
     .select("*")
     .eq("username", username)
     .eq("password", password);
+
+  console.log("LOGIN:", data, error);
+
+  if(error){
+    alert(error.message);
+    return;
+  }
 
   if(!data || data.length === 0){
     alert("Identifiants incorrects");
@@ -81,7 +96,7 @@ async function save(){
 }
 
 /* ================= LEADERBOARD ================= */
-async function leaderboard(){
+async function getLeaderboard(){
   let { data } = await supabase
     .from("users")
     .select("*")
@@ -91,7 +106,7 @@ async function leaderboard(){
   return data;
 }
 
-/* ================= GAME FLOW ================= */
+/* ================= FLOW ================= */
 function next(){
   game++;
   $("nextBtn").style.display="none";
@@ -100,6 +115,7 @@ function next(){
 
 /* ================= SPACE CONTROL ================= */
 let space = false;
+
 document.addEventListener("keydown",(e)=>{
   if(e.code==="Space" && !space){
     space = true;
@@ -118,12 +134,15 @@ document.addEventListener("keyup",(e)=>{
 async function load(){
 
   $("content").innerHTML="";
-  $("score").innerText="";
   $("board").innerHTML="";
+  $("score").innerText="";
 
-  /* LOGIN */
+  window.down = null;
+  window.up = null;
+
+  /* LOGIN SCREEN */
   if(game === -1){
-    $("title").innerText = "TYMERZ";
+    $("title").innerText = "⚡ TYMERZ";
 
     $("content").innerHTML = `
       <input id="username" placeholder="Pseudo">
@@ -142,7 +161,8 @@ async function load(){
     let start;
 
     window.down = () => start = Date.now();
-    window.up = () => addScore(1000 - Math.abs(5 - (Date.now()-start)/1000)*200);
+    window.up = () =>
+      addScore(1000 - Math.abs(5 - (Date.now()-start)/1000)*200);
   }
 
   /* GAME 2 */
@@ -151,16 +171,16 @@ async function load(){
 
     $("content").innerHTML = "<p>Attends le GO</p>";
 
-    let ok = false;
+    let ok=false;
     let t;
 
     setTimeout(()=>{
-      ok = true;
-      t = Date.now();
-      $("content").innerHTML = "<div class='go'>GO</div>";
+      ok=true;
+      t=Date.now();
+      $("content").innerHTML="<div class='go'>GO!</div>";
     },1500+Math.random()*2000);
 
-    window.down = ()=> {
+    window.down = ()=>{
       if(ok) addScore(1000 - (Date.now()-t));
     };
   }
@@ -169,25 +189,25 @@ async function load(){
   else if(game === 2){
     $("title").innerText = "⏱ Stop parfait";
 
-    let start = Date.now();
+    let s=Date.now();
 
-    window.down = ()=> addScore(1000 - Math.abs(10-(Date.now()-start)/1000)*100);
+    window.down = () =>
+      addScore(1000 - Math.abs(10-(Date.now()-s)/1000)*100);
   }
 
   /* GAME 4 */
   else if(game === 3){
-    $("title").innerText = "🔥 Spam";
+    $("title").innerText = "🔥 Spam ESPACE";
 
     let c=0;
+    window.down = ()=>c++;
 
-    window.down = ()=> c++;
-
-    setTimeout(()=> addScore(c*50),5000);
+    setTimeout(()=>addScore(c*50),5000);
   }
 
   /* GAME 5 */
   else if(game === 4){
-    $("title").innerText = "🎯 Cible";
+    $("title").innerText = "🎯 Cibles";
 
     $("content").innerHTML = `<div id="zone"></div>`;
 
@@ -204,7 +224,10 @@ async function load(){
           d.style.left=Math.random()*85+"%";
           d.style.top=Math.random()*85+"%";
 
-          d.onclick=()=>{clicks++;spawn();};
+          d.onclick=()=>{
+            clicks++;
+            spawn();
+          };
 
           zone.appendChild(d);
         }
@@ -212,7 +235,9 @@ async function load(){
 
       spawn();
 
-      setTimeout(()=> addScore(1000 - (Date.now()-start)/10 + clicks*50),5000);
+      setTimeout(()=>{
+        addScore(1000 - (Date.now()-start)/10 + clicks*50);
+      },5000);
 
     },50);
   }
@@ -221,10 +246,12 @@ async function load(){
   else {
     await save();
 
-    let data = await leaderboard();
+    let data = await getLeaderboard();
 
-    $("title").innerText="🏆 Résultat";
-    $("content").innerHTML = `<div class="total">Score : ${total}</div>`;
+    $("title").innerText = "🏆 Résultat";
+
+    $("content").innerHTML =
+      `<div class="total">Score total : ${total}</div>`;
 
     $("board").innerHTML =
       "<h3>Leaderboard</h3>" +
@@ -255,7 +282,7 @@ height:100vh;
 }
 
 .card{
-width:380px;
+width:400px;
 padding:40px;
 border-radius:20px;
 background:rgba(255,255,255,0.05);
@@ -265,9 +292,8 @@ text-align:center;
 }
 
 input{
-display:block;
 width:100%;
-margin:8px 0;
+margin:6px 0;
 padding:10px;
 border-radius:10px;
 border:1px solid #444;
@@ -276,7 +302,7 @@ color:white;
 }
 
 button{
-margin:5px;
+margin:6px;
 padding:10px 15px;
 border-radius:10px;
 border:1px solid #444;
@@ -310,7 +336,7 @@ animation:blink .5s infinite;
 
 @keyframes blink{50%{opacity:0.3}}
 
-.row{padding:5px}
+.row{padding:4px}
 .total{font-size:22px;margin:10px}
 </style>
 
