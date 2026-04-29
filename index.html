@@ -88,16 +88,13 @@ box-shadow:0 0 40px red;
 
 const root=document.getElementById("root");
 
-/* ================= STATE ================= */
 let gameIndex=0;
 let total=0;
 let score=0;
-
-/* input control (IMPORTANT FIX) */
 let canPlay=false;
 let inputLocked=false;
 
-/* ================= GLOBAL SPACE FIX ================= */
+/* SPACE FIX GLOBAL */
 document.addEventListener("keydown",(e)=>{
 if(e.code==="Space") e.preventDefault();
 },{passive:false});
@@ -107,8 +104,7 @@ function render(html){
 root.innerHTML=html;
 }
 
-/* ================= RESET INPUT ================= */
-function resetInput(){
+function reset(){
 window.onkeydown=null;
 window.onkeyup=null;
 inputLocked=false;
@@ -119,7 +115,7 @@ menu();
 
 function menu(){
 
-resetInput();
+reset();
 
 render(`
 <div class="screen">
@@ -135,31 +131,30 @@ render(`
 window.startGame=()=>{
 gameIndex=0;
 total=0;
-nextGame();
+next();
 };
 
 /* ================= FLOW ================= */
-function nextGame(){
-showIntro();
+function next(){
+intro();
 }
 
 /* ================= INTRO ================= */
-function showIntro(){
+function intro(){
 
-resetInput();
+reset();
 
 const txt=[
 "⌛ HOLD SPACE 5s",
 "⚡ Feu rouge → vert",
-"🔥 Spam rapide",
-"🎯 Cibles rapides"
+"⏱ DOUBLE SPACE (9s)",
+"🔥 Spam",
+"🎯 Cibles"
 ];
 
 render(`
 <div class="screen">
   <h2>${txt[gameIndex]}</h2>
-
-  <p>Appuie sur ESPACE ou START</p>
 
   <button onclick="start()">START</button>
 </div>
@@ -171,10 +166,10 @@ if(e.code==="Space") start();
 
 }
 
-/* ================= START GAME ================= */
+/* ================= START ================= */
 window.start=()=>{
 
-resetInput();
+reset();
 score=0;
 canPlay=true;
 
@@ -185,25 +180,22 @@ if(gameIndex===3) game4();
 
 };
 
-/* ================= GAME 1 (HOLD SPACE FIXED) ================= */
+/* ================= GAME 1 (HOLD SPACE + TIME DISPLAY) ================= */
 function game1(){
 
 let start=0;
 let holding=false;
 let timer;
 
-canPlay=true;
-
 render(`
 <div class="screen">
-  <h2>⌛ Appuie SPACE puis MAINTIENS</h2>
+  <h2>MAINTIENS SPACE 5s</h2>
 </div>
 `);
 
 window.onkeydown=(e)=>{
 
-if(e.code!=="Space") return;
-if(inputLocked) return;
+if(e.code!=="Space" || inputLocked) return;
 
 if(!holding){
 holding=true;
@@ -211,7 +203,7 @@ start=Date.now();
 
 timer=setTimeout(()=>{
 score=1000;
-endGame();
+endGame(`Parfait (5000ms)`);
 },5000);
 }
 
@@ -219,28 +211,25 @@ endGame();
 
 window.onkeyup=(e)=>{
 
-if(e.code!=="Space") return;
-if(!holding) return;
+if(e.code!=="Space" || !holding) return;
 
 clearTimeout(timer);
 
-let t=(Date.now()-start)/5000;
+let t=Date.now()-start;
 
-score=Math.max(0,Math.min(1000,t*1000));
+let s=1-Math.abs(5000-t)/5000;
+score=Math.max(0,Math.min(1000,s*1000));
 
-endGame();
-
+endGame(`Temps: ${t}ms`);
 };
 
 }
 
-/* ================= GAME 2 (TRAFFIC LIGHT FIXED) ================= */
+/* ================= GAME 2 (LIGHT + VERT) ================= */
 function game2(){
 
 let green=false;
 let start=0;
-
-canPlay=true;
 
 render(`
 <div class="screen">
@@ -254,9 +243,9 @@ const light=document.getElementById("light");
 
 window.onkeydown=(e)=>{
 
-if(e.code!=="Space") return;
+if(e.code!=="Space" || inputLocked) return;
+
 if(!green) return;
-if(inputLocked) return;
 
 score=Math.max(0,1000-(Date.now()-start));
 endGame();
@@ -275,57 +264,64 @@ light.style.boxShadow="0 0 40px green";
 
 }
 
-/* ================= GAME 3 (SPAM FIXED) ================= */
+/* ================= GAME 3 (DOUBLE SPACE TIMING 9s) ================= */
 function game3(){
 
-let count=0;
-
-canPlay=true;
+let first=false;
+let start=0;
+let wait=false;
 
 render(`
 <div class="screen">
-  <h2>🔥 SPAM</h2>
-
-  <div class="box" id="box"></div>
-  <h1 id="c">0</h1>
+  <h2>SPACE → attendre 9s → SPACE</h2>
 </div>
 `);
 
-const box=document.getElementById("box");
-const c=document.getElementById("c");
-
-box.onclick=()=>{
-if(!canPlay) return;
-count++;
-c.innerText=count;
-};
-
 window.onkeydown=(e)=>{
-if(e.code==="Space" && canPlay){
-count++;
-c.innerText=count;
-}
-};
 
-setTimeout(()=>{
+if(e.code!=="Space" || inputLocked) return;
 
-score=Math.min(1000,count*50);
-endGame();
-
-},5000);
-
-}
-
-/* ================= GAME 4 (TARGETS FIXED) ================= */
-function game4(){
-
-let hits=0;
-
-canPlay=true;
+if(!first){
+first=true;
+start=Date.now();
+wait=true;
 
 render(`
 <div class="screen">
-  <h2>🎯 Clique les cibles</h2>
+  <h2>ATTENDS 9 SECONDES</h2>
+</div>
+`);
+
+setTimeout(()=>{
+wait=false;
+},9000);
+
+return;
+}
+
+if(first && !wait){
+let t=Date.now()-start;
+
+let diff=Math.abs(t-9000);
+
+score=Math.max(0,1000-(diff/10));
+
+endGame(`écart: ${diff}ms`);
+}
+
+};
+
+}
+
+/* ================= GAME 4 (MORE PUNITIVE TARGETS) ================= */
+function game4(){
+
+let hits=0;
+let totalTargets=5;
+
+render(`
+<div class="screen">
+  <h2>🎯 Clique toutes les cibles</h2>
 
   <div class="box" id="arena"></div>
   <h1 id="h">0</h1>
@@ -339,7 +335,7 @@ function spawn(){
 
 arena.innerHTML="";
 
-for(let i=0;i<5;i++){
+for(let i=0;i<totalTargets;i++){
 
 const t=document.createElement("div");
 t.className="target";
@@ -348,10 +344,20 @@ t.style.left=Math.random()*80+"%";
 t.style.top=Math.random()*80+"%";
 
 t.onclick=()=>{
-if(!canPlay) return;
+
+if(inputLocked) return;
+
 hits++;
 h.innerText=hits;
+
 t.remove();
+
+/* FIN IMMÉDIATE SI TERMINÉ */
+if(hits===totalTargets){
+score=1000;
+endGame("perfect clear");
+}
+
 };
 
 arena.appendChild(t);
@@ -362,54 +368,57 @@ arena.appendChild(t);
 
 spawn();
 
+/* timeout plus strict */
 setTimeout(()=>{
 
+if(hits<totalTargets){
 score=Math.min(1000,hits*200);
-endGame();
+endGame("timeout");
+}
 
-},5000);
+},4500);
 
 }
 
 /* ================= END GAME ================= */
-function endGame(){
+function endGame(detail=""){
 
-canPlay=false;
 inputLocked=true;
-resetInput();
+reset();
 
 total+=score;
 
 render(`
 <div class="screen">
   <h2>Score épreuve</h2>
+
   <h1 class="big">${Math.round(score)}</h1>
+
+  <p>${detail}</p>
 
   <p>Total: ${total}/5000</p>
 
-  <button onclick="next()">SUIVANT</button>
+  <button onclick="nextGame()">SUIVANT</button>
 </div>
 `);
 
 }
 
 /* ================= NEXT ================= */
-window.next=()=>{
+window.nextGame=()=>{
 
 gameIndex++;
 
 if(gameIndex>=4){
 final();
 }else{
-nextGame();
+next();
 }
 
 };
 
 /* ================= FINAL ================= */
 function final(){
-
-resetInput();
 
 render(`
 <div class="screen">
