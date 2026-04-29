@@ -6,7 +6,6 @@
 <title>TYMERZ</title>
 
 <style>
-
 html,body{
 margin:0;
 height:100%;
@@ -78,11 +77,9 @@ width:180px;
 height:180px;
 border-radius:50%;
 background:gray;
-box-shadow:0 0 25px black;
 }
 
 .big{font-size:55px;color:#00f0ff;}
-
 </style>
 </head>
 
@@ -97,13 +94,20 @@ const root=document.getElementById("root");
 let gameIndex=0;
 let total=0;
 let score=0;
-
 let user=null;
 let inputLocked=false;
 
-/* ================= SAFE RENDER ================= */
+/* ================= RENDER ================= */
 function render(html){
 root.innerHTML=html;
+}
+
+/* ================= CLEAN ================= */
+function clean(){
+document.onkeydown=null;
+document.onkeyup=null;
+document.onclick=null;
+inputLocked=false;
 }
 
 /* ================= LOGIN ================= */
@@ -117,8 +121,6 @@ render(`
 <input id="p" type="password" placeholder="password">
 
 <button onclick="login()">Connexion</button>
-
-<p>Admin password: TYMERZ2026</p>
 </div>
 `);
 
@@ -163,7 +165,7 @@ menu();
 /* ================= MENU ================= */
 function menu(){
 
-cleanupAll();
+clean();
 
 render(`
 <div class="screen">
@@ -197,7 +199,7 @@ function next(){ intro(); }
 /* ================= INTRO ================= */
 function intro(){
 
-cleanupAll();
+clean();
 
 const txt=[
 "HOLD 5 SECONDES",
@@ -220,45 +222,16 @@ if(e.code==="Space") startGame();
 
 }
 
-/* ================= CLEAN EVENTS ================= */
-function cleanupAll(){
-document.onkeydown=null;
-document.onkeyup=null;
-inputLocked=false;
-}
-
-/* ================= START GAME ================= */
-window.startGame=()=>{
-
-cleanupAll();
-score=0;
-
-if(gameIndex===0) game1();
-if(gameIndex===1) game2();
-if(gameIndex===2) game3();
-if(gameIndex===3) game4();
-if(gameIndex===4) game5();
-
-};
-
-/* ================= GAME 1 (FIXED) ================= */
+/* ================= GAME 1 ================= */
 function game1(){
 
 let start=0;
 let holding=false;
 let timer=null;
 
-render(`
-<div class="screen">
-<h2>MAINTIENS SPACE</h2>
-<p>Objectif : 5 secondes</p>
-</div>
-`);
+render(`<div class="screen"><h2>MAINTIENS 5 SECONDES</h2></div>`);
 
-document.addEventListener("keydown",down);
-document.addEventListener("keyup",up);
-
-function down(e){
+document.onkeydown=(e)=>{
 
 if(e.code!=="Space") return;
 
@@ -272,13 +245,11 @@ end();
 },5000);
 }
 
-}
+};
 
-function up(e){
+document.onkeyup=(e)=>{
 
 if(e.code!=="Space") return;
-
-if(!holding) return;
 
 clearTimeout(timer);
 
@@ -286,15 +257,15 @@ let t=Date.now()-start;
 
 score=Math.max(0,1000-Math.abs(5000-t)/5);
 
-end(`⏱ ${(t/1000).toFixed(2)}s`);
+end();
 
-}
+};
 
-function end(txt){
-document.removeEventListener("keydown",down);
-document.removeEventListener("keyup",up);
+function end(){
+document.onkeydown=null;
+document.onkeyup=null;
 inputLocked=true;
-endGame(txt);
+endGame(`⏱ ${(Date.now()-start)/1000}s`);
 }
 
 }
@@ -305,12 +276,7 @@ function game2(){
 let green=false;
 let start=0;
 
-render(`
-<div class="screen">
-<h2>ATTENDS VERT</h2>
-<div class="bigCircle"></div>
-</div>
-`);
+render(`<div class="screen"><h2>ATTENDS VERT</h2><div class="bigCircle"></div></div>`);
 
 const c=document.querySelector(".bigCircle");
 
@@ -334,7 +300,7 @@ c.style.background="green";
 
 }
 
-/* ================= GAME 3 FIXED ================= */
+/* ================= GAME 3 ================= */
 function game3(){
 
 let running=false;
@@ -343,10 +309,7 @@ let start=0;
 render(`
 <div class="screen">
 <h2>TOGGLE 9 SECONDES</h2>
-
 <div id="btn" class="bigCircle"></div>
-
-<p>SPACE ou click = start/stop</p>
 </div>
 `);
 
@@ -367,7 +330,7 @@ let t=Date.now()-start;
 
 score=Math.max(0,1000-Math.abs(9000-t)/8);
 
-endGame(`⏱ ${(t/1000).toFixed(2)}s`);
+endGame();
 }
 
 }
@@ -386,24 +349,14 @@ function game4(){
 let count=0;
 let start=Date.now();
 
-render(`
-<div class="screen">
-<h2>🔥 SPAM</h2>
-
-<div class="box"></div>
-<h1 id="c">0</h1>
-</div>
-`);
+render(`<div class="screen"><h2>SPAM</h2><div class="box"></div><h1 id="c">0</h1></div>`);
 
 const c=document.getElementById("c");
 
-document.onclick=()=>{if(!inputLocked){count++;c.innerText=count;}};
+document.onclick=()=>{count++;c.innerText=count};
 
 document.onkeydown=(e)=>{
-if(e.code==="Space" && !inputLocked){
-count++;
-c.innerText=count;
-}
+if(e.code==="Space"){count++;c.innerText=count;}
 };
 
 setTimeout(()=>{
@@ -413,13 +366,13 @@ let cps=count/t;
 
 score=Math.min(1000,cps*120);
 
-endGame(`🔥 ${count}`);
+endGame();
 
 },5000);
 
 }
 
-/* ================= GAME 5 FIXED ================= */
+/* ================= GAME 5 FIX ================= */
 function game5(){
 
 let hits=0;
@@ -428,8 +381,7 @@ let start=Date.now();
 
 render(`
 <div class="screen">
-<h2>🎯 CIBLES RAPIDES</h2>
-
+<h2>🎯 CIBLES</h2>
 <div class="box" id="arena"></div>
 <h1 id="h">0</h1>
 </div>
@@ -452,8 +404,6 @@ t.style.top=Math.random()*80+"%";
 
 t.onclick=()=>{
 
-if(inputLocked) return;
-
 hits++;
 h.innerText=hits;
 t.remove();
@@ -462,7 +412,8 @@ if(hits===needed){
 
 let time=(Date.now()-start)/1000;
 
-score = time < 3 ? 1000 : Math.max(400, 1000 - time*250);
+/* 🔥 SCORE DÉCROISSANT CONTINU */
+score = Math.max(200, 1000 - time*300);
 
 endGame(`⚡ ${time.toFixed(2)}s`);
 }
@@ -477,22 +428,12 @@ arena.appendChild(t);
 
 spawn();
 
-setTimeout(()=>{
-
-if(hits<needed){
-score=Math.min(1000,hits*(1000/needed));
-endGame("timeout");
-}
-
-},3500);
-
 }
 
 /* ================= END ================= */
 function endGame(detail=""){
 
 inputLocked=true;
-
 total+=score;
 
 render(`
@@ -543,7 +484,7 @@ render(`
 
 }
 
-/* ================= LEADERBOARD (STABLE FINAL) ================= */
+/* ================= CLASSEMENT FIX ULTRA ROBUSTE ================= */
 function saveScore(){
 
 let board=[];
@@ -554,16 +495,13 @@ board=JSON.parse(localStorage.getItem("board")||"[]");
 board=[];
 }
 
-board.push({
-user:user||"guest",
-total:total
-});
+board.push({user:user||"guest",total:Number(total)||0});
 
-board=board.filter(x=>x && typeof x.total==="number");
+board = board.filter(x => x && !isNaN(x.total));
 
 board.sort((a,b)=>b.total-a.total);
 
-board=board.slice(0,10);
+if(board.length>10) board=board.slice(0,10);
 
 localStorage.setItem("board",JSON.stringify(board));
 
