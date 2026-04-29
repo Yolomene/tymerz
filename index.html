@@ -6,13 +6,37 @@
 <title>TYmerz</title>
 
 <script type="module">
-import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
 
-/* ================= SUPABASE ================= */
-const supabase = createClient(
-  "https://lsgrfmweasnjzkwzhnys.supabase.co",
-  "TON_ANON_KEY_ICI"
-);
+/* ================= IMPORT SUPABASE (VERSION STABLE) ================= */
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+/* ================= CONFIG ================= */
+const SUPABASE_URL = "https://lsgrfmweasnjzkwzhnys.supabase.co";
+const SUPABASE_KEY = "TON_ANON_KEY_ICI"; // ⚠️ à remplacer
+
+console.log("🚀 INIT SUPABASE...");
+console.log("URL =", SUPABASE_URL);
+console.log("KEY =", SUPABASE_KEY?.slice(0,20) + "...");
+
+/* ================= CREATE CLIENT ================= */
+const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+console.log("✅ SUPABASE CLIENT CREATED");
+
+/* ================= TEST CONNECTION ================= */
+async function testConnection(){
+  console.log("🧪 TEST CONNECTION USERS TABLE...");
+
+  const { data, error } = await supabase
+    .from("users")
+    .select("*")
+    .limit(1);
+
+  console.log("DATA =", data);
+  console.log("ERROR =", error);
+}
+
+testConnection();
 
 /* ================= STATE ================= */
 let user = null;
@@ -22,20 +46,14 @@ let total = 0;
 /* ================= DOM ================= */
 const $ = (id) => document.getElementById(id);
 
-/* ================= DEBUG ================= */
-window.onerror = (msg) => console.log("JS ERROR:", msg);
-
 /* ================= AUTH ================= */
 async function signup(){
   const username = $("username").value;
   const password = $("password").value;
 
-  if(!username || !password){
-    alert("Remplis tout");
-    return;
-  }
+  console.log("🟡 SIGNUP TRY", username);
 
-  let { data, error } = await supabase
+  const { data, error } = await supabase
     .from("users")
     .insert({
       username,
@@ -44,7 +62,7 @@ async function signup(){
     })
     .select();
 
-  console.log("SIGNUP:", data, error);
+  console.log("SIGNUP RESULT:", data, error);
 
   if(error){
     alert("Erreur signup: " + error.message);
@@ -58,13 +76,15 @@ async function login(){
   const username = $("username").value;
   const password = $("password").value;
 
-  let { data, error } = await supabase
+  console.log("🟡 LOGIN TRY", username);
+
+  const { data, error } = await supabase
     .from("users")
     .select("*")
     .eq("username", username)
     .eq("password", password);
 
-  console.log("LOGIN:", data, error);
+  console.log("LOGIN RESULT:", data, error);
 
   if(error){
     alert(error.message);
@@ -97,7 +117,7 @@ async function save(){
 
 /* ================= LEADERBOARD ================= */
 async function getLeaderboard(){
-  let { data } = await supabase
+  const { data } = await supabase
     .from("users")
     .select("*")
     .order("score", { ascending:false })
@@ -251,7 +271,7 @@ async function load(){
     $("title").innerText = "🏆 Résultat";
 
     $("content").innerHTML =
-      `<div class="total">Score total : ${total}</div>`;
+      `<div class="total">Score : ${total}</div>`;
 
     $("board").innerHTML =
       "<h3>Leaderboard</h3>" +
@@ -267,6 +287,7 @@ window.login = login;
 window.next = next;
 
 load();
+
 </script>
 
 <style>
