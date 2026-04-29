@@ -14,37 +14,36 @@ const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
-/* ================= AUDIO ================= */
-const sfx = {
-  click: new Audio("https://actions.google.com/sounds/v1/cartoon/pop.ogg"),
-  start: new Audio("https://actions.google.com/sounds/v1/cartoon/wood_plank_flicks.ogg"),
-  success: new Audio("https://actions.google.com/sounds/v1/cartoon/clang_and_wobble.ogg")
-};
-
 /* ================= STATE ================= */
 let user=null;
-let gameIndex=0;
+let step="login";
+let game=0;
 let score=0;
 
-/* ================= DOM ================= */
-const app=document.getElementById("app");
+/* ================= ROOT ================= */
+const root = document.getElementById("root");
 
-/* ================= TRANSITION SYSTEM ================= */
-function transition(cb){
-  const screen=document.querySelector(".screen");
-  if(screen){
-    screen.classList.add("fade-out");
+/* ================= RENDER SYSTEM ================= */
+function render(html, transition=true){
+
+  const old = document.querySelector(".screen");
+
+  if(old && transition){
+    old.classList.add("out");
     setTimeout(()=>{
-      cb();
+      root.innerHTML = html;
     },250);
-  } else cb();
+  } else {
+    root.innerHTML = html;
+  }
+
 }
 
-/* ================= AUTH ================= */
+/* ================= LOGIN ================= */
 async function login(){
 
-  const u=username.value;
-  const p=password.value;
+  const u = document.getElementById("u").value;
+  const p = document.getElementById("p").value;
 
   const { data } = await supabase
     .from("users")
@@ -52,7 +51,7 @@ async function login(){
     .eq("username",u)
     .eq("password",p);
 
-  if(!data.length) return alert("Identifiants incorrects");
+  if(!data.length) return alert("Erreur login");
 
   user=data[0];
   menu();
@@ -61,8 +60,8 @@ async function login(){
 async function signup(){
 
   await supabase.from("users").insert({
-    username:username.value,
-    password:password.value,
+    username:document.getElementById("u").value,
+    password:document.getElementById("p").value,
     score:0
   });
 
@@ -72,43 +71,36 @@ async function signup(){
 /* ================= MENU ================= */
 function menu(){
 
-  transition(()=>{
+  render(`
+  <div class="screen full center">
+    <h1>⚡ TYMERZ</h1>
+    <button onclick="start()">Jouer</button>
+    <button onclick="leaderboard()">Leaderboard</button>
+  </div>
+  `);
 
-    app.innerHTML=`
-      <div class="screen fade-in card">
-        <h1>⚡ TYMERZ</h1>
-        <button onclick="start()">Jouer</button>
-        <button onclick="leaderboard()">Leaderboard</button>
-      </div>
-    `;
-
-  });
 }
 
 window.start=()=>rules();
 
-/* ================= RULE SCREEN ================= */
+/* ================= RULES ================= */
 function rules(){
 
   const rules=[
-    "⌛ 5 secondes parfaites",
+    "⌛ Maintiens 5 secondes",
     "⚡ Réflexe instantané",
     "⏱ Stop parfait",
     "🔥 Spam ESPACE",
     "🎯 Click rapide"
   ];
 
-  transition(()=>{
-
-    app.innerHTML=`
-      <div class="screen fade-in card">
-        <h2>${rules[gameIndex]}</h2>
-        <p>Appuie sur ESPACE pour commencer</p>
-        <button onclick="play()">START</button>
-      </div>
-    `;
-
-  });
+  render(`
+  <div class="screen full center">
+    <h2>${rules[game]}</h2>
+    <p>Appuie sur ESPACE pour commencer</p>
+    <button onclick="play()">START</button>
+  </div>
+  `);
 
 }
 
@@ -117,136 +109,101 @@ window.play=()=>runGame();
 /* ================= GAME ENGINE ================= */
 function runGame(){
 
-  sfx.start.play();
-
   let start=Date.now();
 
-  transition(()=>{
+  render(`<div class="screen full game">GO</div>`);
 
-    app.innerHTML=`<div class="screen game">⚡</div>`;
+  setTimeout(()=>{
 
-    setTimeout(()=>{
-
-      /* GAME 1 */
-      if(gameIndex===0){
-
-        window.onkeydown=(e)=>{
-          if(e.code==="Space"){
-            const t=(Date.now()-start)/1000;
-            score += 1000 - Math.abs(5-t)*200;
-            next();
-          }
-        };
-
-      }
-
-      /* GAME 2 */
-      if(gameIndex===1){
-
-        let go=false;
-
-        setTimeout(()=>{
-          go=true;
-          start=Date.now();
-          app.innerHTML="<div class='glow'>GO!</div>";
-        },1500);
-
-        window.onkeydown=(e)=>{
-          if(e.code==="Space" && go){
-            score += 1000-(Date.now()-start);
-            next();
-          }
-        };
-
-      }
-
-      /* GAME 3 */
-      if(gameIndex===2){
-
-        window.onkeydown=(e)=>{
-          if(e.code==="Space"){
-            const t=(Date.now()-start)/1000;
-            score += 1000 - Math.abs(10-t)*100;
-            next();
-          }
-        };
-
-      }
-
-      /* GAME 4 */
-      if(gameIndex===3){
-
-        let c=0;
-        window.onkeydown=()=>c++;
-
-        setTimeout(()=>{
-          score += c*40;
+    /* GAME 1 */
+    if(game===0){
+      window.onkeydown=(e)=>{
+        if(e.code==="Space"){
+          const t=(Date.now()-start)/1000;
+          score += 1000 - Math.abs(5-t)*200;
           next();
-        },5000);
+        }
+      };
+    }
 
-      }
+    /* GAME 2 */
+    if(game===1){
+      let go=false;
 
-      /* GAME 5 */
-      if(gameIndex===4){
+      setTimeout(()=>{
+        go=true;
+        start=Date.now();
+        render(`<div class="screen full game glow">GO!</div>`);
+      },1500);
 
-        let clicks=0;
-        window.onclick=()=>clicks++;
-
-        setTimeout(()=>{
-          score += clicks*60;
+      window.onkeydown=(e)=>{
+        if(e.code==="Space" && go){
+          score += 1000-(Date.now()-start);
           next();
-        },5000);
+        }
+      };
+    }
 
-      }
+    /* GAME 3 */
+    if(game===2){
+      window.onkeydown=(e)=>{
+        if(e.code==="Space"){
+          const t=(Date.now()-start)/1000;
+          score += 1000 - Math.abs(10-t)*100;
+          next();
+        }
+      };
+    }
 
-    },300);
+    /* GAME 4 */
+    if(game===3){
+      let c=0;
+      window.onkeydown=()=>c++;
 
-  });
+      setTimeout(()=>{
+        score += c*40;
+        next();
+      },5000);
+    }
+
+    /* GAME 5 */
+    if(game===4){
+      let clicks=0;
+      window.onclick=()=>clicks++;
+
+      setTimeout(()=>{
+        score += clicks*60;
+        next();
+      },5000);
+    }
+
+  },300);
 
 }
 
 /* ================= NEXT ================= */
 function next(){
 
-  sfx.success.play();
+  game++;
 
-  save();
-
-  gameIndex++;
-
-  if(gameIndex>=5){
+  if(game>=5){
     end();
     return;
   }
 
   rules();
-}
-
-/* ================= SAVE ================= */
-async function save(){
-
-  if(!user) return;
-
-  await supabase
-    .from("users")
-    .update({ score })
-    .eq("username",user.username);
 
 }
 
 /* ================= END ================= */
 function end(){
 
-  transition(()=>{
-
-    app.innerHTML=`
-      <div class="screen fade-in card">
-        <h2>🏆 Score : ${Math.round(score)}</h2>
-        <button onclick="location.reload()">Rejouer</button>
-      </div>
-    `;
-
-  });
+  render(`
+  <div class="screen full center">
+    <h1>🏆 ${Math.round(score)}</h1>
+    <button onclick="location.reload()">Rejouer</button>
+  </div>
+  `);
 
 }
 
@@ -259,23 +216,16 @@ async function leaderboard(){
     .order("score",{ascending:false})
     .limit(10);
 
-  transition(()=>{
-
-    app.innerHTML=`
-      <div class="screen fade-in card">
-        <h2>🏆 Leaderboard</h2>
-        ${data.map(u=>`
-          <p>${u.username} — ${u.score}</p>
-        `).join("")}
-        <button onclick="menu()">Retour</button>
-      </div>
-    `;
-
-  });
+  render(`
+  <div class="screen full center">
+    <h2>Leaderboard</h2>
+    ${data.map(u=>`<p>${u.username} - ${u.score}</p>`).join("")}
+    <button onclick="menu()">Retour</button>
+  </div>
+  `);
 
 }
 
-/* expose */
 window.login=login;
 window.signup=signup;
 window.menu=menu;
@@ -284,93 +234,86 @@ window.menu=menu;
 
 <style>
 
-/* ================= BACKGROUND ================= */
-body{
+html,body{
 margin:0;
-height:100vh;
-display:flex;
-justify-content:center;
-align-items:center;
-background:radial-gradient(circle,#0a0a12,#050507);
-color:white;
-font-family:Arial;
+height:100%;
 overflow:hidden;
+font-family:Arial;
+background:#050510;
+color:white;
 }
 
-/* ================= SCREEN SYSTEM ================= */
+/* FULL SCREEN ENGINE */
+#root{
+width:100%;
+height:100%;
+}
+
+/* SCREEN BASE */
 .screen{
+width:100%;
+height:100%;
+position:absolute;
+top:0;
+left:0;
+display:flex;
+flex-direction:column;
+justify-content:center;
+align-items:center;
 transition:all .25s ease;
 }
 
-.fade-out{
+/* TRANSITION OUT */
+.out{
 opacity:0;
-transform:scale(0.98);
+transform:scale(1.05);
 filter:blur(10px);
 }
 
-.fade-in{
-animation:fadeIn .4s ease;
+/* FULL SCREEN LAYOUT */
+.full{
+background:radial-gradient(circle,#0a0a12,#050507);
 }
 
-@keyframes fadeIn{
-from{opacity:0;transform:scale(1.02);filter:blur(10px)}
-to{opacity:1;transform:scale(1);filter:blur(0)}
-}
-
-/* ================= CARD UI ================= */
-.card{
-background:rgba(255,255,255,0.06);
-padding:25px;
-border-radius:20px;
-backdrop-filter:blur(20px);
-width:320px;
+/* CENTER */
+.center{
 text-align:center;
-box-shadow:0 0 40px rgba(0,255,255,0.08);
+gap:10px;
 }
 
-/* ================= INPUT ================= */
+/* BUTTON */
+button{
+padding:12px 20px;
+border:none;
+border-radius:12px;
+background:linear-gradient(90deg,#00f0ff,#7b61ff);
+color:white;
+font-weight:bold;
+cursor:pointer;
+width:200px;
+}
+
+/* INPUT */
 input{
-width:100%;
-margin:5px 0;
 padding:10px;
+margin:5px;
 border-radius:10px;
 border:none;
 background:#111;
 color:white;
+width:200px;
 }
 
-/* ================= BUTTON ================= */
-button{
-width:100%;
-padding:10px;
-margin-top:5px;
-border:none;
-border-radius:10px;
-cursor:pointer;
-background:linear-gradient(90deg,#00f0ff,#7b61ff);
-color:white;
-font-weight:bold;
-}
-
-/* ================= GAME SCREEN ================= */
+/* GAME TEXT */
 .game{
-font-size:40px;
-text-align:center;
-color:#00f0ff;
+font-size:50px;
 text-shadow:0 0 20px #00f0ff;
 }
 
-/* ================= GLITCH TEXT ================= */
+/* GLOW */
 .glow{
-font-size:40px;
 color:#00f0ff;
 text-shadow:0 0 20px #00f0ff;
-animation:pop .3s ease;
-}
-
-@keyframes pop{
-from{transform:scale(.5);opacity:0}
-to{transform:scale(1);opacity:1}
 }
 
 </style>
@@ -379,18 +322,20 @@ to{transform:scale(1);opacity:1}
 
 <body>
 
-<div class="card">
-<h1>⚡ TYMERZ</h1>
+<div id="root"></div>
 
-<input id="username" placeholder="pseudo">
-<input id="password" type="password" placeholder="password">
-
-<button onclick="signup()">Créer compte</button>
-<button onclick="login()">Connexion</button>
-
+<!-- LOGIN SCREEN INITIAL -->
+<script>
+document.getElementById("root").innerHTML=`
+<div class="screen full center">
+  <h1>⚡ TYMERZ</h1>
+  <input id="u" placeholder="pseudo">
+  <input id="p" type="password" placeholder="password">
+  <button onclick="signup()">Créer compte</button>
+  <button onclick="login()">Connexion</button>
 </div>
-
-<div id="app"></div>
+`;
+</script>
 
 </body>
 </html>
