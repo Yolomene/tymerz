@@ -8,166 +8,299 @@
 <script type="module">
 import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
 
+// 🔐 SUPABASE
 const supabase = createClient(
   "https://lsgrfmweasnjzkwzhnys.supabase.co",
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxzZ3JmbXdlYXNuanprd3pobnlzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc0NTg5NjUsImV4cCI6MjA5MzAzNDk2NX0.zovLpylyQTNVx0AIOhUCCQ_BdnkghAU3isR3YHoLHY8"
 );
 
-let user=null,totalScore=0,scores=[],game=-1;
+let user=null;
+let total=0;
+let scores=[];
+let game=-1;
 
-// AUTH
+// ---------------- AUTH ----------------
 async function signup(){
- const p=pseudo.value, pass=password.value;
- const {error}=await supabase.auth.signUp({email:p+"@tymerz.com",password:pass});
- alert(error?error.message:"Compte créé");
+  const p=pseudo.value;
+  const pw=password.value;
+  const email=p+"@tymerz.com";
+
+  const {error}=await supabase.auth.signUp({email,password:pw});
+  showToast(error?error.message:"Compte créé 🚀");
 }
+
 async function login(){
- const p=pseudo.value, pass=password.value;
- const {data,error}=await supabase.auth.signInWithPassword({email:p+"@tymerz.com",password:pass});
- if(error)return alert(error.message);
- user=data.user; next();
+  const p=pseudo.value;
+  const pw=password.value;
+  const email=p+"@tymerz.com";
+
+  const {data,error}=await supabase.auth.signInWithPassword({email,password:pw});
+  if(error)return showToast(error.message);
+
+  user=data.user;
+  next();
 }
 
-// SCORE
-function setScore(v){
- let s=Math.max(0,Math.min(1000,Math.round(v)));
- totalScore+=s; scores.push(s);
- score.innerText="+"+s;
- score.classList.add("pop");
- setTimeout(()=>score.classList.remove("pop"),300);
- nextBtn.style.display="block";
+// ---------------- SCORE ----------------
+function addScore(v){
+  let s=Math.max(0,Math.min(1000,Math.round(v)));
+  total+=s;
+  scores.push(s);
+
+  scoreBox.innerText="+"+s;
+  scoreBox.classList.add("pop");
+  setTimeout(()=>scoreBox.classList.remove("pop"),300);
+
+  nextBtn.style.display="block";
 }
 
+// meilleur score uniquement
 async function saveScore(){
- const pseudo=user.email.split("@")[0];
+  const name=user.email.split("@")[0];
 
- // garde meilleur score uniquement
- let {data}=await supabase.from("leaderboard").select("*").eq("username",pseudo);
- if(data.length===0){
-  await supabase.from("leaderboard").insert({username:pseudo,score:totalScore});
- }else{
-  if(totalScore>data[0].score){
-    await supabase.from("leaderboard").update({score:totalScore}).eq("username",pseudo);
+  let {data}=await supabase.from("leaderboard").select("*").eq("username",name);
+
+  if(!data || data.length===0){
+    await supabase.from("leaderboard").insert({username:name,score:total});
+  } else {
+    if(total>data[0].score){
+      await supabase.from("leaderboard").update({score:total}).eq("username",name);
+    }
   }
- }
 }
 
-async function loadLeaderboard(){
- let {data}=await supabase.from("leaderboard").select("*").order("score",{ascending:false}).limit(10);
- return data;
+async function getLeaderboard(){
+  let {data}=await supabase.from("leaderboard").select("*").order("score",{ascending:false}).limit(10);
+  return data;
 }
 
+// ---------------- FLOW ----------------
 function next(){game++;nextBtn.style.display="none";load();}
 
 let space=false;
-document.addEventListener("keydown",e=>{if(e.code==="Space"&&!space){space=true;if(window.down)window.down();}});
-document.addEventListener("keyup",e=>{if(e.code==="Space"){space=false;if(window.up)window.up();}});
+document.addEventListener("keydown",e=>{
+  if(e.code==="Space"&&!space){space=true;if(window.down)window.down();}
+});
+document.addEventListener("keyup",e=>{
+  if(e.code==="Space"){space=false;if(window.up)window.up();}
+});
 
-async function load(){
- score.innerText=""; leaderboard.innerHTML="";
- window.down=null;window.up=null;
-
- if(game===-1){
-  title.innerText="Connexion";
-  content.innerHTML=`
-  <input id="pseudo" placeholder="Pseudo"><br>
-  <input id="password" type="password" placeholder="Mot de passe"><br>
-  <button onclick="signup()">Créer</button>
-  <button onclick="login()">Connexion</button>`;
- }
-
- else if(game===0){
-  title.innerText="Maintiens 5 sec";
-  content.innerHTML="<p>Maintiens ESPACE</p>";
-  let s;
-  window.down=()=>s=Date.now();
-  window.up=()=>setScore(1000-Math.abs(5-(Date.now()-s)/1000)*200);
- }
-
- else if(game===1){
-  title.innerText="Réaction";
-  content.innerHTML="<p>Attends...</p>";
-  let start,ready=false;
-  setTimeout(()=>{ready=true;start=Date.now();content.innerHTML="<p class='go'>GO</p>";},2000+Math.random()*2000);
-  window.down=()=>{if(ready)setScore(1000-(Date.now()-start));};
- }
-
- else if(game===2){
-  title.innerText="10 sec";
-  content.innerHTML="<p>Stop au bon moment</p>";
-  let s=Date.now();
-  window.down=()=>setScore(1000-Math.abs(10-(Date.now()-s)/1000)*100);
- }
-
- else if(game===3){
-  title.innerText="Spam";
-  content.innerHTML="<p>Spam espace</p>";
-  let c=0;
-  window.down=()=>c++;
-  setTimeout(()=>setScore(c*50),5000);
- }
-
- else if(game===4){
-  title.innerText="Points";
-  content.innerHTML='<div id="zone"></div>';
-  let z=zone,count=0,start=Date.now();
-
-  function spawn(){
-    z.innerHTML="";
-    for(let i=0;i<5;i++){
-      let d=document.createElement("div");
-      d.className="dot";
-      d.style.left=Math.random()*90+"%";
-      d.style.top=Math.random()*90+"%";
-      d.onclick=()=>{count++;spawn();};
-      z.appendChild(d);
-    }
-  }
-  spawn();
-  setTimeout(()=>setScore(1000-(Date.now()-start)/10+count*50),5000);
- }
-
- else{
-  await saveScore();
-  let data=await loadLeaderboard();
-
-  title.innerText="Résultat";
-  content.innerHTML=`Total: ${totalScore}`;
-
-  leaderboard.innerHTML="<h3>🏆 Classement</h3>"+
-  data.map((p,i)=>`<div class='rank'>#${i+1} ${p.username} - ${p.score}</div>`).join("");
- }
+function showToast(t){
+  toast.innerText=t;
+  toast.classList.add("show");
+  setTimeout(()=>toast.classList.remove("show"),2000);
 }
 
-window.signup=signup;window.login=login;window.next=next;
+// ---------------- GAME ----------------
+async function load(){
+  content.innerHTML="";
+  leaderboard.innerHTML="";
+  scoreBox.innerText="";
+
+  window.down=null;
+  window.up=null;
+
+  if(game===-1){
+    title.innerText="⚡ TYMERZ";
+    content.innerHTML=`
+    <div class='glass'>
+      <input id='pseudo' placeholder='Pseudo'>
+      <input id='password' type='password' placeholder='Mot de passe'>
+      <button onclick='signup()'>Créer compte</button>
+      <button onclick='login()'>Connexion</button>
+    </div>`;
+  }
+
+  else if(game===0){
+    title.innerText="⌛ 5 secondes parfaites";
+    content.innerHTML="<p>Maintiens ESPACE</p>";
+    let s;
+    window.down=()=>s=Date.now();
+    window.up=()=>addScore(1000-Math.abs(5-(Date.now()-s)/1000)*200);
+  }
+
+  else if(game===1){
+    title.innerText="⚡ Réaction";
+    content.innerHTML="<p>Attends...</p>";
+    let start,ok=false;
+    setTimeout(()=>{
+      ok=true;
+      start=Date.now();
+      content.innerHTML="<p class='go'>GO !</p>";
+    },1500+Math.random()*2000);
+
+    window.down=()=>{
+      if(ok)addScore(1000-(Date.now()-start));
+    }
+  }
+
+  else if(game===2){
+    title.innerText="⏱ Stop parfait";
+    content.innerHTML="<p>Stop au bon moment</p>";
+    let s=Date.now();
+    window.down=()=>addScore(1000-Math.abs(10-(Date.now()-s)/1000)*100);
+  }
+
+  else if(game===3){
+    title.innerText="🔥 Spam";
+    content.innerHTML="<p>ESPACE le plus vite possible</p>";
+    let c=0;
+    window.down=()=>c++;
+    setTimeout(()=>addScore(c*45),5000);
+  }
+
+  else if(game===4){
+    title.innerText="🎯 Reflexe visuel";
+    content.innerHTML="<div id='zone'></div>";
+
+    let zone=document.getElementById("zone");
+    let clicks=0;
+    let start=Date.now();
+
+    function spawn(){
+      zone.innerHTML="";
+      for(let i=0;i<5;i++){
+        let d=document.createElement("div");
+        d.className="dot";
+        d.style.left=Math.random()*85+"%";
+        d.style.top=Math.random()*85+"%";
+        d.onclick=()=>{clicks++;spawn();};
+        zone.appendChild(d);
+      }
+    }
+
+    spawn();
+
+    setTimeout(()=>addScore(1000-(Date.now()-start)/10+clicks*60),5000);
+  }
+
+  else{
+    await saveScore();
+
+    let data=await getLeaderboard();
+
+    title.innerText="🏆 Résultat";
+    content.innerHTML=`<div class='total'>Score total : ${total}</div>`;
+
+    leaderboard.innerHTML="<h3>Classement mondial</h3>"+
+    data.map((p,i)=>`<div class='rank'>#${i+1} ${p.username} — ${p.score}</div>`).join("");
+  }
+}
+
+window.signup=signup;
+window.login=login;
+window.next=next;
+
 load();
 </script>
 
 <style>
-body{margin:0;font-family:Arial;background:linear-gradient(135deg,#020617,#0f172a);color:white;display:flex;justify-content:center;align-items:center;height:100vh;overflow:hidden;}
-.card{background:rgba(255,255,255,0.05);backdrop-filter:blur(20px);padding:40px;border-radius:25px;box-shadow:0 0 60px rgba(0,0,0,0.8);text-align:center;width:360px;animation:fade 1s;}
-@keyframes fade{from{opacity:0;transform:scale(.9);}to{opacity:1;}}
-button{margin:10px;padding:12px 25px;border-radius:12px;border:1px solid #444;background:#111;color:white;cursor:pointer;transition:.2s;}
-button:hover{box-shadow:0 0 15px cyan;transform:scale(1.05);}
-input{margin:10px;padding:12px;border-radius:12px;border:1px solid #444;background:#000;color:white;}
-.dot{width:40px;height:40px;background:cyan;border-radius:50%;position:absolute;cursor:pointer;box-shadow:0 0 15px cyan;}
+body{
+margin:0;
+font-family:Arial;
+background:radial-gradient(circle,#0f172a,#020617);
+color:white;
+display:flex;
+justify-content:center;
+align-items:center;
+height:100vh;
+overflow:hidden;
+}
+
+.card{
+background:rgba(255,255,255,0.05);
+backdrop-filter:blur(20px);
+padding:40px;
+border-radius:25px;
+box-shadow:0 0 80px rgba(0,0,0,0.8);
+text-align:center;
+width:380px;
+animation:fade .6s ease;
+}
+
+@keyframes fade{from{opacity:0;transform:scale(.9)}to{opacity:1}}
+
+button{
+margin:10px;
+padding:12px 20px;
+border-radius:12px;
+border:1px solid #444;
+background:#111;
+color:white;
+cursor:pointer;
+transition:.2s;
+}
+
+button:hover{transform:scale(1.05);box-shadow:0 0 20px cyan;}
+
+input{
+margin:10px;
+padding:12px;
+border-radius:12px;
+border:1px solid #444;
+background:black;
+color:white;
+}
+
+.dot{
+width:35px;
+height:35px;
+border-radius:50%;
+background:cyan;
+position:absolute;
+box-shadow:0 0 15px cyan;
+cursor:pointer;
+}
+
 #zone{height:300px;position:relative;}
-.rank{padding:5px;margin:3px;background:rgba(255,255,255,0.05);border-radius:8px;}
-.pop{animation:pop .3s;}
-@keyframes pop{0%{transform:scale(1);}50%{transform:scale(1.5);}100%{transform:scale(1);}}
-.go{color:lime;font-size:30px;animation:flash .5s infinite;}
-@keyframes flash{0%{opacity:1;}50%{opacity:.3;}100%{opacity:1;}}
+
+.rank{
+padding:6px;
+margin:5px;
+background:rgba(255,255,255,0.05);
+border-radius:10px;
+}
+
+.total{font-size:20px;margin:10px;}
+
+.pop{animation:pop .3s}
+@keyframes pop{0%{transform:scale(1)}50%{transform:scale(1.5)}100%{transform:scale(1)}}
+
+.go{color:lime;font-size:30px;animation:blink .5s infinite}
+@keyframes blink{50%{opacity:0.3}}
+
+.glass{
+display:flex;
+flex-direction:column;
+}
+
+#toast{
+position:fixed;
+top:20px;
+right:20px;
+padding:10px 15px;
+background:rgba(0,0,0,0.7);
+border:1px solid cyan;
+border-radius:10px;
+display:none;
+}
+
+#toast.show{display:block;}
 </style>
 
 </head>
 <body>
+
 <div class="card">
-<h1>⏱ TYmerz</h1>
+<h1>⚡ TYmerz</h1>
 <h2 id="title"></h2>
 <div id="content"></div>
 <p id="score"></p>
 <button id="nextBtn" onclick="next()" style="display:none">Suivant</button>
 <div id="leaderboard"></div>
 </div>
+
+<div id="toast"></div>
+
 </body>
 </html>
