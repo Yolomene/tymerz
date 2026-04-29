@@ -102,17 +102,17 @@ let score=0;
 let user=null;
 let inputLocked=false;
 
-/* SPACE FIX GLOBAL */
+/* SPACE FIX */
 document.addEventListener("keydown",(e)=>{
 if(e.code==="Space") e.preventDefault();
 },{passive:false});
 
-/* ================= RENDER ================= */
+/* RENDER */
 function render(html){
 root.innerHTML=html;
 }
 
-/* ================= RESET ================= */
+/* RESET */
 function reset(){
 window.onkeydown=null;
 window.onkeyup=null;
@@ -158,7 +158,7 @@ menu();
 
 };
 
-/* ================= BOOT ================= */
+/* BOOT */
 boot();
 
 function boot(){
@@ -217,7 +217,7 @@ const txt=[
 "FEU VERT",
 "TOGGLE 9 SECONDES",
 "SPAM",
-"CIBLES"
+"CIBLES RAPIDES"
 ];
 
 render(`
@@ -233,20 +233,6 @@ if(e.code==="Space") startGame();
 
 }
 
-/* ================= START GAME ================= */
-window.startGame=()=>{
-
-reset();
-score=0;
-
-if(gameIndex===0) game1();
-if(gameIndex===1) game2();
-if(gameIndex===2) game3();
-if(gameIndex===3) game4();
-if(gameIndex===4) game5();
-
-};
-
 /* ================= GAME 1 ================= */
 function game1(){
 
@@ -254,12 +240,7 @@ let start=0;
 let holding=false;
 let timer;
 
-render(`
-<div class="screen">
-<h2>MAINTIENS SPACE</h2>
-<p>Objectif : 5 secondes</p>
-</div>
-`);
+render(`<div class="screen"><h2>MAINTIENS 5 SECONDES</h2></div>`);
 
 window.onkeydown=(e)=>{
 
@@ -329,7 +310,7 @@ c.style.background="green";
 
 }
 
-/* ================= GAME 3 FIXED TOGGLE ================= */
+/* ================= GAME 3 ================= */
 function game3(){
 
 let running=false;
@@ -337,11 +318,11 @@ let start=0;
 
 render(`
 <div class="screen">
-<h2>⏱ TOGGLE 9 SECONDES</h2>
+<h2>TOGGLE 9 SECONDES</h2>
 
 <div id="btn" class="bigCircle"></div>
 
-<p>SPACE = start / stop</p>
+<p>SPACE start/stop</p>
 </div>
 `);
 
@@ -377,7 +358,7 @@ btn.onclick=toggle;
 
 }
 
-/* ================= GAME 4 SPAM ================= */
+/* ================= GAME 4 ================= */
 function game4(){
 
 let count=0;
@@ -416,15 +397,16 @@ endGame(`🔥 ${count}`);
 
 }
 
-/* ================= GAME 5 HARD ================= */
+/* ================= GAME 5 FIXED ================= */
 function game5(){
 
 let hits=0;
-let needed=7;
+let needed=6; // 🔥 FIX = 6 cibles
+let start=Date.now();
 
 render(`
 <div class="screen">
-<h2>🎯 CIBLES HARD</h2>
+<h2>🎯 CIBLES RAPIDES</h2>
 
 <div class="box" id="arena"></div>
 <h1 id="h">0</h1>
@@ -455,8 +437,13 @@ h.innerText=hits;
 t.remove();
 
 if(hits===needed){
-score=1000;
-endGame("perfect");
+
+let time=(Date.now()-start)/1000;
+
+/* 🔥 plus strict = 1000 only if fast */
+score = time < 3 ? 1000 : Math.max(300, 1000 - time*200);
+
+endGame(`⚡ ${time.toFixed(2)}s`);
 }
 
 };
@@ -476,7 +463,7 @@ score=Math.min(1000,hits*(1000/needed));
 endGame("timeout");
 }
 
-},4500);
+},3500); // 🔥 plus rapide
 
 }
 
@@ -535,7 +522,7 @@ render(`
 
 }
 
-/* ================= LEADERBOARD FIX ================= */
+/* ================= LEADERBOARD (FIX FINAL) ================= */
 function saveScore(){
 
 let board=[];
@@ -546,10 +533,15 @@ board=JSON.parse(localStorage.getItem("board")||"[]");
 board=[];
 }
 
+if(!user) user="guest";
+
 board.push({
-user:user||"guest",
+user:user,
 total:total
 });
+
+/* sécurité anti crash */
+board=board.filter(x=>x && typeof x.total==="number");
 
 board.sort((a,b)=>b.total-a.total);
 
