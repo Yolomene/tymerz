@@ -3,106 +3,106 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>TYMERZ</title>
+<title>TYMERZ AAA</title>
 
 <style>
-
-/* ===== RESET ===== */
 *{margin:0;padding:0;box-sizing:border-box}
 
-/* ===== GLOBAL ===== */
 body{
 height:100vh;
-background: radial-gradient(circle at top, #0a1a3a, #020617);
+background: radial-gradient(circle at top, #0b1c3f, #020617);
 color:white;
 font-family: 'Segoe UI', sans-serif;
+display:flex;
+justify-content:center;
+align-items:center;
 overflow:hidden;
 }
 
+/* ===== MAIN ===== */
 #app{
 width:100%;
-height:100%;
-position:relative;
+max-width:900px;
 }
 
-/* ===== TRANSITIONS ===== */
-.screen{
-position:absolute;
-width:100%;
-height:100%;
+/* ===== HEADER ===== */
+.header{
+text-align:center;
+margin-bottom:30px;
+opacity:0.8;
+}
+
+.dots{
 display:flex;
-flex-direction:column;
 justify-content:center;
-align-items:center;
-opacity:0;
-transform:scale(1.05);
-transition:0.4s ease;
+gap:10px;
+margin-top:10px;
 }
 
-.screen.active{
-opacity:1;
-transform:scale(1);
+.dot{
+width:10px;height:10px;
+border-radius:50%;
+background:#2b3a5a;
 }
 
-/* ===== TITLE ===== */
-.title{
-font-size:90px;
-font-weight:800;
-color:#9bd1ff;
-text-shadow:0 0 40px rgba(100,200,255,0.6);
+.dot.active{
+background:#4fd1ff;
+box-shadow:0 0 10px #4fd1ff;
 }
 
-.subtitle{
-opacity:0.7;
-margin-bottom:40px;
-}
-
-/* ===== MENU ===== */
-.menu-row{
-display:flex;
-gap:40px;
-align-items:center;
-}
-
+/* ===== CARD ===== */
 .card{
 background:rgba(255,255,255,0.05);
-backdrop-filter:blur(20px);
 border-radius:25px;
-padding:30px;
-width:280px;
-box-shadow:0 0 30px rgba(0,0,0,0.4);
-}
-
-.center-card{
-width:420px;
+padding:40px;
 text-align:center;
+box-shadow:0 0 40px rgba(0,0,0,0.4);
+backdrop-filter:blur(20px);
 }
 
-.play-btn{
+.title{
+font-size:28px;
+margin-bottom:10px;
+}
+
+.big{
+font-size:80px;
+font-weight:800;
+margin:20px 0;
+}
+
+/* ===== BUTTON ===== */
+.btn{
 width:100%;
 height:80px;
 border:none;
 border-radius:20px;
-font-size:26px;
+font-size:24px;
 font-weight:bold;
 background:linear-gradient(90deg,#4fd1ff,#9f7aea);
 color:white;
 cursor:pointer;
-transition:0.2s;
+margin-top:20px;
 }
-
-.play-btn:hover{transform:scale(1.05)}
 
 /* ===== GAME ===== */
 .box{
-width:80%;
-height:250px;
+height:200px;
 border-radius:20px;
 border:2px solid #4fd1ff;
 display:flex;
 justify-content:center;
 align-items:center;
 font-size:50px;
+margin-top:20px;
+}
+
+.bigCircle{
+width:120px;
+height:120px;
+border-radius:50%;
+background:#444;
+margin:20px auto;
 }
 
 .target{
@@ -113,26 +113,6 @@ background:#4fd1ff;
 position:absolute;
 cursor:pointer;
 }
-
-.bigCircle{
-width:160px;
-height:160px;
-border-radius:50%;
-background:#444;
-}
-
-/* ===== BUTTON ===== */
-.btn{
-margin-top:20px;
-padding:15px 40px;
-border:none;
-border-radius:15px;
-font-size:18px;
-background:#4fd1ff;
-color:black;
-cursor:pointer;
-}
-
 </style>
 </head>
 
@@ -144,119 +124,97 @@ cursor:pointer;
 const app = document.getElementById("app");
 
 /* ===== STATE ===== */
-let user=null, game=0, total=0, score=0;
+let game=0,total=0,score=0,user=null;
 
-/* ===== SCREEN SYSTEM ===== */
-function setScreen(html){
-app.innerHTML = `<div class="screen active">${html}</div>`;
+/* ===== UTIL ===== */
+function render(html){
+app.innerHTML=html;
 }
 
-/* ===== INPUT CLEAN ===== */
-function clean(){
+function clearInput(){
 window.onkeydown=null;
-window.onkeyup=null;
 }
 
-/* ===== LOGIN ===== */
-function loginScreen(){
-
-let saved = localStorage.getItem("user");
-
-if(saved){
-user=saved;
-menu();
-return;
+/* ===== SPACE GLOBAL ===== */
+function bindSpace(action){
+window.onkeydown=(e)=>{
+if(e.code==="Space"){
+e.preventDefault();
+action();
 }
-
-setScreen(`
-<h1 class="title">timerz</h1>
-
-<input id="u" placeholder="username" style="height:50px;width:250px;text-align:center;margin:10px">
-<input id="p" type="password" placeholder="password" style="height:50px;width:250px;text-align:center;margin:10px">
-
-<button class="btn" onclick="login()">LOGIN</button>
-`);
-}
-
-window.login=()=>{
-user=document.getElementById("u").value;
-if(!user) return;
-
-localStorage.setItem("user",user);
-menu();
 };
+}
+
+/* ===== HEADER ===== */
+function header(){
+return `
+<div class="header">
+<div>MANCHE ${game+1} / 5</div>
+<div class="dots">
+${[0,1,2,3,4].map(i=>`<div class="dot ${i===game?"active":""}"></div>`).join("")}
+</div>
+</div>
+`;
+}
 
 /* ===== MENU ===== */
 function menu(){
 
-let board = JSON.parse(localStorage.getItem("board")||"[]");
-
-setScreen(`
-<div class="title">timerz</div>
-<div class="subtitle">Teste ta perception du temps</div>
-
-<div class="menu-row">
-
+render(`
 <div class="card">
-<h3>Podium</h3>
-${board.slice(0,3).map((b,i)=>`<p>${i+1}. ${b.user} - ${b.total}</p>`).join("")}
-</div>
+<h1 style="font-size:60px">timerz</h1>
+<p style="opacity:0.7">Teste ta perception du temps</p>
 
-<div class="card center-card">
-<p style="color:#4ade80">Connecté : ${user}</p>
-
-<button class="play-btn" onclick="start()">Jouer</button>
-
-<p onclick="leaderboard()">Classement →</p>
-<p onclick="logout()">Logout →</p>
-</div>
-
-<div class="card">
-<h3>Derniers scores</h3>
-${board.slice(-3).reverse().map(b=>`<p>${b.user} - ${b.total}</p>`).join("")}
-</div>
-
+<button class="btn" onclick="start()">Jouer (Espace)</button>
 </div>
 `);
+
+bindSpace(start);
 }
 
 /* ===== START ===== */
-window.start=()=>{
+function start(){
 game=0;
 total=0;
 intro();
-};
-
-function intro(){
-
-const names=[
-"HOLD 5s",
-"REACTION",
-"9 SECONDS",
-"SPAM SPACE",
-"CIBLES"
-];
-
-setScreen(`
-<h2>${names[game]}</h2>
-<button class="btn" onclick="launch()">START</button>
-`);
 }
 
-window.launch=()=>{
+/* ===== INTRO ===== */
+function intro(){
+
+const texts=[
+"Garde SPACE 5 secondes",
+"Appuie au vert",
+"Arrête à 9 secondes",
+"Spam SPACE",
+"Clique les cibles"
+];
+
+render(`
+${header()}
+<div class="card">
+<div class="title">${texts[game]}</div>
+<button class="btn" onclick="launch()">Prêt (Espace)</button>
+</div>
+`);
+
+bindSpace(launch);
+}
+
+/* ===== LAUNCH ===== */
+function launch(){
 [g1,g2,g3,g4,g5][game]();
-};
+}
 
 /* ===== GAME 1 ===== */
 function g1(){
 
-let start=0,holding=false;
+let start=0;
 
-setScreen(`<h2>HOLD SPACE 5s</h2>`);
+render(`${header()}<div class="card"><div class="title">Maintiens SPACE</div></div>`);
 
 window.onkeydown=e=>{
-if(e.code!=="Space")return;
-if(!holding){holding=true;start=Date.now();}
+if(e.code==="Space") start=Date.now();
 };
 
 window.onkeyup=e=>{
@@ -264,7 +222,6 @@ if(e.code!=="Space")return;
 
 let t=Date.now()-start;
 score=Math.max(0,1000-Math.abs(5000-t)/5);
-
 end();
 };
 }
@@ -274,7 +231,7 @@ function g2(){
 
 let green=false,start=0;
 
-setScreen(`<h2>WAIT GREEN</h2><div class="bigCircle"></div>`);
+render(`${header()}<div class="card"><div class="bigCircle"></div></div>`);
 
 setTimeout(()=>{
 green=true;
@@ -285,19 +242,17 @@ document.querySelector(".bigCircle").style.background="green";
 window.onkeydown=e=>{
 if(e.code!=="Space"||!green)return;
 
-let t=Date.now()-start;
-score=Math.max(0,1000-t);
-
+score=Math.max(0,1000-(Date.now()-start));
 end();
 };
 }
 
-/* ===== GAME 3 (FIX) ===== */
+/* ===== GAME 3 ===== */
 function g3(){
 
 let running=false,start=0;
 
-setScreen(`<h2>9 SECONDS</h2><p>Start / Stop</p>`);
+render(`${header()}<div class="card"><div class="title">Start / Stop</div></div>`);
 
 window.onkeydown=e=>{
 if(e.code!=="Space")return;
@@ -305,22 +260,20 @@ if(e.code!=="Space")return;
 if(!running){
 running=true;
 start=Date.now();
-return;
-}
-
+}else{
 let t=Date.now()-start;
 score=Math.max(0,1000-Math.abs(9000-t)/8);
-
 end();
+}
 };
 }
 
-/* ===== GAME 4 (SPACE SPAM) ===== */
+/* ===== GAME 4 ===== */
 function g4(){
 
 let count=0,start=Date.now();
 
-setScreen(`<h2>SPAM SPACE</h2><div class="box" id="b">0</div>`);
+render(`${header()}<div class="card"><div class="box" id="b">0</div></div>`);
 
 const b=document.getElementById("b");
 
@@ -342,7 +295,7 @@ function g5(){
 
 let hits=0,start=Date.now();
 
-setScreen(`<h2>CIBLES</h2><div class="box" id="box"></div>`);
+render(`${header()}<div class="card"><div class="box" id="box"></div></div>`);
 
 const box=document.getElementById("box");
 
@@ -373,60 +326,43 @@ box.appendChild(d);
 /* ===== END ===== */
 function end(){
 
-clean();
+clearInput();
 total+=score;
 
-setScreen(`
+render(`
+${header()}
+<div class="card">
 <h2>+${Math.round(score)}</h2>
 <p>Total : ${total}</p>
-<button class="btn" onclick="next()">NEXT</button>
+<button class="btn" onclick="next()">Continuer (Espace)</button>
+</div>
 `);
+
+bindSpace(next);
 }
 
 /* ===== NEXT ===== */
-window.next=()=>{
+function next(){
 game++;
 if(game>=5)finish();
 else intro();
-};
+}
 
-/* ===== FINAL ===== */
+/* ===== FIN ===== */
 function finish(){
 
-let board=JSON.parse(localStorage.getItem("board")||"[]");
-
-board.push({user,total});
-board.sort((a,b)=>b.total-a.total);
-
-localStorage.setItem("board",JSON.stringify(board.slice(0,10)));
-
-setScreen(`
+render(`
+<div class="card">
 <h1>${total}</h1>
-<button class="btn" onclick="menu()">MENU</button>
-<button class="btn" onclick="start()">RETRY</button>
+<button class="btn" onclick="menu()">Menu (Espace)</button>
+</div>
 `);
-}
 
-/* ===== LEADERBOARD ===== */
-function leaderboard(){
-
-let board=JSON.parse(localStorage.getItem("board")||"[]");
-
-setScreen(`
-<h2>Classement</h2>
-${board.map((b,i)=>`<p>${i+1}. ${b.user} - ${b.total}</p>`).join("")}
-<button class="btn" onclick="menu()">BACK</button>
-`);
-}
-
-/* ===== LOGOUT ===== */
-function logout(){
-localStorage.removeItem("user");
-loginScreen();
+bindSpace(menu);
 }
 
 /* ===== START ===== */
-loginScreen();
+menu();
 
 </script>
 </body>
