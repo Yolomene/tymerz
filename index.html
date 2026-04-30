@@ -3,75 +3,49 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>TYMERZ AAA</title>
 
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 
 body{
 height:100vh;
-background: radial-gradient(circle at top, #0b1c3f, #020617);
+background: radial-gradient(circle at top, #0a1a3a, #020617);
 color:white;
 font-family: 'Segoe UI', sans-serif;
 display:flex;
 justify-content:center;
 align-items:center;
-overflow:hidden;
 }
 
-/* ===== MAIN ===== */
-#app{
-width:100%;
-max-width:900px;
+#app{width:100%;max-width:1000px}
+
+/* ===== HOME ===== */
+.title{
+font-size:90px;
+font-weight:800;
+color:#9bd1ff;
+text-shadow:0 0 40px rgba(100,200,255,0.6);
 }
 
-/* ===== HEADER ===== */
-.header{
-text-align:center;
-margin-bottom:30px;
-opacity:0.8;
-}
-
-.dots{
+.menu{
 display:flex;
-justify-content:center;
-gap:10px;
-margin-top:10px;
+gap:40px;
+margin-top:40px;
 }
 
-.dot{
-width:10px;height:10px;
-border-radius:50%;
-background:#2b3a5a;
-}
-
-.dot.active{
-background:#4fd1ff;
-box-shadow:0 0 10px #4fd1ff;
-}
-
-/* ===== CARD ===== */
 .card{
 background:rgba(255,255,255,0.05);
+padding:30px;
 border-radius:25px;
-padding:40px;
-text-align:center;
-box-shadow:0 0 40px rgba(0,0,0,0.4);
+width:300px;
 backdrop-filter:blur(20px);
 }
 
-.title{
-font-size:28px;
-margin-bottom:10px;
+.center{
+width:400px;
+text-align:center;
 }
 
-.big{
-font-size:80px;
-font-weight:800;
-margin:20px 0;
-}
-
-/* ===== BUTTON ===== */
 .btn{
 width:100%;
 height:80px;
@@ -81,15 +55,18 @@ font-size:24px;
 font-weight:bold;
 background:linear-gradient(90deg,#4fd1ff,#9f7aea);
 color:white;
-cursor:pointer;
 margin-top:20px;
 }
 
-/* ===== GAME ===== */
+/* ===== GAME UI ===== */
+.header{text-align:center;margin-bottom:20px}
+.dot{width:10px;height:10px;border-radius:50%;background:#333;display:inline-block;margin:5px}
+.active{background:#4fd1ff}
+
 .box{
 height:200px;
-border-radius:20px;
 border:2px solid #4fd1ff;
+border-radius:20px;
 display:flex;
 justify-content:center;
 align-items:center;
@@ -98,76 +75,79 @@ margin-top:20px;
 }
 
 .bigCircle{
-width:120px;
-height:120px;
-border-radius:50%;
-background:#444;
-margin:20px auto;
+width:120px;height:120px;border-radius:50%;background:#444;margin:20px auto;
 }
 
 .target{
-width:40px;
-height:40px;
-border-radius:50%;
-background:#4fd1ff;
-position:absolute;
-cursor:pointer;
+width:40px;height:40px;border-radius:50%;background:#4fd1ff;position:absolute;
 }
 </style>
 </head>
 
 <body>
-
 <div id="app"></div>
 
 <script>
-const app = document.getElementById("app");
+const app=document.getElementById("app");
 
 /* ===== STATE ===== */
-let game=0,total=0,score=0,user=null;
+let game=0,total=0,score=0;
 
-/* ===== UTIL ===== */
-function render(html){
-app.innerHTML=html;
+/* ===== INPUT FIX ===== */
+let spaceLock=false;
+
+function bindSpace(fn){
+window.onkeydown=(e)=>{
+if(e.code!=="Space") return;
+if(e.repeat) return; // 🔥 FIX HOLD BUG
+if(spaceLock) return;
+
+spaceLock=true;
+fn();
+
+setTimeout(()=>spaceLock=false,200); // debounce intelligent
+};
 }
 
 function clearInput(){
 window.onkeydown=null;
 }
 
-/* ===== SPACE GLOBAL ===== */
-function bindSpace(action){
-window.onkeydown=(e)=>{
-if(e.code==="Space"){
-e.preventDefault();
-action();
-}
-};
-}
-
 /* ===== HEADER ===== */
 function header(){
 return `
 <div class="header">
-<div>MANCHE ${game+1} / 5</div>
-<div class="dots">
-${[0,1,2,3,4].map(i=>`<div class="dot ${i===game?"active":""}"></div>`).join("")}
-</div>
-</div>
-`;
+${[0,1,2,3,4].map(i=>`<span class="dot ${i===game?"active":""}"></span>`).join("")}
+</div>`;
 }
 
-/* ===== MENU ===== */
+/* ===== MENU (BEAU) ===== */
 function menu(){
 
-render(`
-<div class="card">
-<h1 style="font-size:60px">timerz</h1>
-<p style="opacity:0.7">Teste ta perception du temps</p>
+let board=JSON.parse(localStorage.getItem("board")||"[]");
 
-<button class="btn" onclick="start()">Jouer (Espace)</button>
+app.innerHTML=`
+<div class="title">timerz</div>
+
+<div class="menu">
+
+<div class="card">
+<h3>Top</h3>
+${board.slice(0,3).map(b=>`<p>${b.user||"Player"} - ${b.total}</p>`).join("")}
 </div>
-`);
+
+<div class="card center">
+<p>Bienvenue</p>
+<button class="btn" onclick="start()">Jouer</button>
+</div>
+
+<div class="card">
+<h3>Récents</h3>
+${board.slice(-3).reverse().map(b=>`<p>${b.user||"Player"} - ${b.total}</p>`).join("")}
+</div>
+
+</div>
+`;
 
 bindSpace(start);
 }
@@ -182,56 +162,50 @@ intro();
 /* ===== INTRO ===== */
 function intro(){
 
-const texts=[
-"Garde SPACE 5 secondes",
-"Appuie au vert",
-"Arrête à 9 secondes",
-"Spam SPACE",
-"Clique les cibles"
+const txt=[
+"Maintiens 5 secondes",
+"Attends le vert",
+"Arrête à 9s",
+"Spam espace",
+"Cibles"
 ];
 
-render(`
+app.innerHTML=`
 ${header()}
-<div class="card">
-<div class="title">${texts[game]}</div>
-<button class="btn" onclick="launch()">Prêt (Espace)</button>
+<div class="card center">
+<h2>${txt[game]}</h2>
+<button class="btn" onclick="launch()">Prêt</button>
 </div>
-`);
+`;
 
 bindSpace(launch);
 }
 
-/* ===== LAUNCH ===== */
-function launch(){
-[g1,g2,g3,g4,g5][game]();
-}
+/* ===== GAMES ===== */
 
-/* ===== GAME 1 ===== */
 function g1(){
-
 let start=0;
 
-render(`${header()}<div class="card"><div class="title">Maintiens SPACE</div></div>`);
+app.innerHTML=`${header()}<div class="card center"><h2>Maintiens SPACE</h2></div>`;
 
 window.onkeydown=e=>{
-if(e.code==="Space") start=Date.now();
+if(e.code==="Space"&&!e.repeat) start=Date.now();
 };
 
 window.onkeyup=e=>{
 if(e.code!=="Space")return;
 
 let t=Date.now()-start;
-score=Math.max(0,1000-Math.abs(5000-t)/5);
+score=Math.max(0,Math.round(1000-Math.abs(5000-t)/5)); // ✔ no float
 end();
 };
 }
 
-/* ===== GAME 2 ===== */
 function g2(){
 
 let green=false,start=0;
 
-render(`${header()}<div class="card"><div class="bigCircle"></div></div>`);
+app.innerHTML=`${header()}<div class="card center"><div class="bigCircle"></div></div>`;
 
 setTimeout(()=>{
 green=true;
@@ -240,68 +214,66 @@ document.querySelector(".bigCircle").style.background="green";
 },1500+Math.random()*2000);
 
 window.onkeydown=e=>{
-if(e.code!=="Space"||!green)return;
+if(e.code!=="Space"||!green||e.repeat)return;
 
-score=Math.max(0,1000-(Date.now()-start));
+score=Math.max(0,Math.round(1000-(Date.now()-start)));
 end();
 };
 }
 
-/* ===== GAME 3 ===== */
 function g3(){
 
 let running=false,start=0;
 
-render(`${header()}<div class="card"><div class="title">Start / Stop</div></div>`);
+app.innerHTML=`${header()}<div class="card center"><h2>Start / Stop</h2></div>`;
 
 window.onkeydown=e=>{
-if(e.code!=="Space")return;
+if(e.code!=="Space"||e.repeat)return;
 
 if(!running){
 running=true;
 start=Date.now();
 }else{
 let t=Date.now()-start;
-score=Math.max(0,1000-Math.abs(9000-t)/8);
+score=Math.max(0,Math.round(1000-Math.abs(9000-t)/8));
 end();
 }
 };
 }
 
-/* ===== GAME 4 ===== */
 function g4(){
 
 let count=0,start=Date.now();
 
-render(`${header()}<div class="card"><div class="box" id="b">0</div></div>`);
+app.innerHTML=`${header()}<div class="card center"><div class="box" id="b">0</div></div>`;
 
 const b=document.getElementById("b");
 
 window.onkeydown=e=>{
-if(e.code!=="Space")return;
+if(e.code!=="Space"||e.repeat)return;
+
 count++;
 b.innerText=count;
 };
 
 setTimeout(()=>{
 let cps=count/((Date.now()-start)/1000);
-score=Math.min(1000,cps*150);
+score=Math.min(1000,Math.round(cps*150));
 end();
 },5000);
 }
 
-/* ===== GAME 5 ===== */
 function g5(){
 
 let hits=0,start=Date.now();
 
-render(`${header()}<div class="card"><div class="box" id="box"></div></div>`);
+app.innerHTML=`${header()}<div class="card center"><div class="box" id="box"></div></div>`;
 
 const box=document.getElementById("box");
 
 function finish(){
 let t=(Date.now()-start)/1000;
-score=Math.max(500,1000-t*180);
+score=Math.max(500,Math.round(1000-t*180));
 end();
 }
 
@@ -323,40 +295,49 @@ box.appendChild(d);
 }
 }
 
-/* ===== END ===== */
-function end(){
+/* ===== FLOW ===== */
 
+function launch(){
+[g1,g2,g3,g4,g5][game]();
+}
+
+function end(){
 clearInput();
 total+=score;
 
-render(`
+app.innerHTML=`
 ${header()}
-<div class="card">
-<h2>+${Math.round(score)}</h2>
+<div class="card center">
+<h2>+${score}</h2>
 <p>Total : ${total}</p>
-<button class="btn" onclick="next()">Continuer (Espace)</button>
+<button class="btn" onclick="next()">Continuer</button>
 </div>
-`);
+`;
 
 bindSpace(next);
 }
 
-/* ===== NEXT ===== */
 function next(){
 game++;
 if(game>=5)finish();
 else intro();
 }
 
-/* ===== FIN ===== */
 function finish(){
 
-render(`
-<div class="card">
+let board=JSON.parse(localStorage.getItem("board")||"[]");
+
+board.push({total});
+board.sort((a,b)=>b.total-a.total);
+
+localStorage.setItem("board",JSON.stringify(board.slice(0,10)));
+
+app.innerHTML=`
+<div class="card center">
 <h1>${total}</h1>
-<button class="btn" onclick="menu()">Menu (Espace)</button>
+<button class="btn" onclick="menu()">Menu</button>
 </div>
-`);
+`;
 
 bindSpace(menu);
 }
