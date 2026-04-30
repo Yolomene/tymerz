@@ -1,244 +1,280 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-<meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>TYMERZ ENGINE</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TYMERZ</title>
 
 <style>
-html,body{
-margin:0;
-height:100%;
-background:#050510;
-font-family:Arial;
-overflow:hidden;
+
+/* ===== RESET ===== */
+*{margin:0;padding:0;box-sizing:border-box}
+
+/* ===== GLOBAL ===== */
+body{
+height:100vh;
+background: radial-gradient(circle at top, #0a1a3a, #020617);
 color:white;
+font-family: 'Segoe UI', sans-serif;
+overflow:hidden;
 }
 
-#root{width:100%;height:100%;}
+#app{
+width:100%;
+height:100%;
+position:relative;
+}
 
+/* ===== TRANSITIONS ===== */
 .screen{
+position:absolute;
 width:100%;
 height:100%;
 display:flex;
 flex-direction:column;
 justify-content:center;
 align-items:center;
+opacity:0;
+transform:scale(1.05);
+transition:0.4s ease;
+}
+
+.screen.active{
+opacity:1;
+transform:scale(1);
+}
+
+/* ===== TITLE ===== */
+.title{
+font-size:90px;
+font-weight:800;
+color:#9bd1ff;
+text-shadow:0 0 40px rgba(100,200,255,0.6);
+}
+
+.subtitle{
+opacity:0.7;
+margin-bottom:40px;
+}
+
+/* ===== MENU ===== */
+.menu-row{
+display:flex;
+gap:40px;
+align-items:center;
+}
+
+.card{
+background:rgba(255,255,255,0.05);
+backdrop-filter:blur(20px);
+border-radius:25px;
+padding:30px;
+width:280px;
+box-shadow:0 0 30px rgba(0,0,0,0.4);
+}
+
+.center-card{
+width:420px;
 text-align:center;
 }
 
-button{
-width:85%;
+.play-btn{
+width:100%;
 height:80px;
-margin:10px;
 border:none;
-border-radius:18px;
-font-size:20px;
-background:#00f0ff;
-color:black;
+border-radius:20px;
+font-size:26px;
 font-weight:bold;
+background:linear-gradient(90deg,#4fd1ff,#9f7aea);
+color:white;
+cursor:pointer;
+transition:0.2s;
 }
 
+.play-btn:hover{transform:scale(1.05)}
+
+/* ===== GAME ===== */
 .box{
-width:85%;
+width:80%;
 height:250px;
-border:2px solid #00f0ff;
 border-radius:20px;
+border:2px solid #4fd1ff;
 display:flex;
 justify-content:center;
 align-items:center;
-font-size:40px;
-position:relative;
+font-size:50px;
 }
 
 .target{
 width:40px;
 height:40px;
 border-radius:50%;
-background:#00f0ff;
+background:#4fd1ff;
 position:absolute;
 cursor:pointer;
 }
 
 .bigCircle{
-width:150px;
-height:150px;
+width:160px;
+height:160px;
 border-radius:50%;
-background:gray;
+background:#444;
 }
+
+/* ===== BUTTON ===== */
+.btn{
+margin-top:20px;
+padding:15px 40px;
+border:none;
+border-radius:15px;
+font-size:18px;
+background:#4fd1ff;
+color:black;
+cursor:pointer;
+}
+
 </style>
 </head>
 
 <body>
 
-<div id="root"></div>
+<div id="app"></div>
 
 <script>
-const root=document.getElementById("root");
+const app = document.getElementById("app");
 
-/* ================= STATE ================= */
-let user=null;
-let game=0;
-let total=0;
-let score=0;
+/* ===== STATE ===== */
+let user=null, game=0, total=0, score=0;
 
-/* ================= RENDER ================= */
-function render(html){
-root.innerHTML=html;
+/* ===== SCREEN SYSTEM ===== */
+function setScreen(html){
+app.innerHTML = `<div class="screen active">${html}</div>`;
 }
 
-/* ================= CLEAN ================= */
-function cleanup(){
+/* ===== INPUT CLEAN ===== */
+function clean(){
 window.onkeydown=null;
 window.onkeyup=null;
-window.onclick=null;
 }
 
-/* ================= LOGIN ================= */
-function saveUser(u){
-localStorage.setItem("ty_user",JSON.stringify(u));
-}
-
-function loadUser(){
-try{return JSON.parse(localStorage.getItem("ty_user"));}
-catch(e){return null;}
-}
-
-function logout(){
-localStorage.removeItem("ty_user");
-user=null;
-loginScreen();
-}
-
-/* ================= LOGIN SCREEN ================= */
+/* ===== LOGIN ===== */
 function loginScreen(){
 
-let saved=loadUser();
+let saved = localStorage.getItem("user");
+
 if(saved){
-user=saved.user;
+user=saved;
 menu();
 return;
 }
 
-render(`
-<div class="screen">
-<h1>TYMERZ</h1>
+setScreen(`
+<h1 class="title">timerz</h1>
 
-<input id="u" placeholder="username" style="height:50px;width:80%;text-align:center;">
-<input id="p" type="password" placeholder="password" style="height:50px;width:80%;text-align:center;">
+<input id="u" placeholder="username" style="height:50px;width:250px;text-align:center;margin:10px">
+<input id="p" type="password" placeholder="password" style="height:50px;width:250px;text-align:center;margin:10px">
 
-<button onclick="login()">LOGIN</button>
-</div>
+<button class="btn" onclick="login()">LOGIN</button>
 `);
 }
 
 window.login=()=>{
-const u=document.getElementById("u").value;
-const p=document.getElementById("p").value;
+user=document.getElementById("u").value;
+if(!user) return;
 
-if(!u) return;
-
-user=(p==="ADMIN")?"ADMIN_"+u:u;
-
-saveUser({user});
+localStorage.setItem("user",user);
 menu();
 };
 
-/* ================= MENU ================= */
+/* ===== MENU ===== */
 function menu(){
-cleanup();
 
-render(`
-<div class="screen">
-<h1>TYMERZ</h1>
-<p>${user}</p>
+let board = JSON.parse(localStorage.getItem("board")||"[]");
 
-<button onclick="start()">PLAY</button>
-<button onclick="leaderboard()">LEADERBOARD</button>
-<button onclick="logout()">LOGOUT</button>
+setScreen(`
+<div class="title">timerz</div>
+<div class="subtitle">Teste ta perception du temps</div>
+
+<div class="menu-row">
+
+<div class="card">
+<h3>Podium</h3>
+${board.slice(0,3).map((b,i)=>`<p>${i+1}. ${b.user} - ${b.total}</p>`).join("")}
+</div>
+
+<div class="card center-card">
+<p style="color:#4ade80">Connecté : ${user}</p>
+
+<button class="play-btn" onclick="start()">Jouer</button>
+
+<p onclick="leaderboard()">Classement →</p>
+<p onclick="logout()">Logout →</p>
+</div>
+
+<div class="card">
+<h3>Derniers scores</h3>
+${board.slice(-3).reverse().map(b=>`<p>${b.user} - ${b.total}</p>`).join("")}
+</div>
+
 </div>
 `);
 }
 
-/* ================= START ================= */
+/* ===== START ===== */
 window.start=()=>{
 game=0;
 total=0;
-next();
+intro();
 };
 
-function next(){
-intro();
-}
-
-/* ================= INTRO ================= */
 function intro(){
 
 const names=[
-"HOLD SPACE 5s",
-"REACTION GREEN",
-"TOGGLE 9s",
+"HOLD 5s",
+"REACTION",
+"9 SECONDS",
 "SPAM SPACE",
 "CIBLES"
 ];
 
-render(`
-<div class="screen">
+setScreen(`
 <h2>${names[game]}</h2>
-<button onclick="startGame()">START</button>
-</div>
+<button class="btn" onclick="launch()">START</button>
 `);
 }
 
-window.startGame=()=>{
-if(game===0)g1();
-if(game===1)g2();
-if(game===2)g3();
-if(game===3)g4();
-if(game===4)g5();
+window.launch=()=>{
+[g1,g2,g3,g4,g5][game]();
 };
 
-/* ================= GAME 1 ================= */
+/* ===== GAME 1 ===== */
 function g1(){
 
-let start=0;
-let holding=false;
+let start=0,holding=false;
 
-render(`<div class="screen"><h2>HOLD SPACE 5s</h2></div>`);
+setScreen(`<h2>HOLD SPACE 5s</h2>`);
 
-window.onkeydown=(e)=>{
+window.onkeydown=e=>{
 if(e.code!=="Space")return;
-
-if(!holding){
-holding=true;
-start=Date.now();
-}
+if(!holding){holding=true;start=Date.now();}
 };
 
-window.onkeyup=(e)=>{
+window.onkeyup=e=>{
 if(e.code!=="Space")return;
 
 let t=Date.now()-start;
 score=Math.max(0,1000-Math.abs(5000-t)/5);
 
-cleanup();
-endGame();
+end();
 };
 }
 
-/* ================= GAME 2 ================= */
+/* ===== GAME 2 ===== */
 function g2(){
 
-let green=false;
-let start=0;
-let done=false;
+let green=false,start=0;
 
-render(`
-<div class="screen">
-<h2>WAIT GREEN</h2>
-<div class="bigCircle"></div>
-</div>
-`);
+setScreen(`<h2>WAIT GREEN</h2><div class="bigCircle"></div>`);
 
 setTimeout(()=>{
 green=true;
@@ -246,34 +282,24 @@ start=Date.now();
 document.querySelector(".bigCircle").style.background="green";
 },1500+Math.random()*2000);
 
-window.onkeydown=(e)=>{
-if(e.code!=="Space")return;
-if(!green||done)return;
-
-done=true;
+window.onkeydown=e=>{
+if(e.code!=="Space"||!green)return;
 
 let t=Date.now()-start;
 score=Math.max(0,1000-t);
 
-cleanup();
-endGame();
+end();
 };
 }
 
-/* ================= GAME 3 (TOGGLE FIX) ================= */
+/* ===== GAME 3 (FIX) ===== */
 function g3(){
 
-let running=false;
-let start=0;
+let running=false,start=0;
 
-render(`
-<div class="screen">
-<h2>TOGGLE 9 SECONDES</h2>
-<p>SPACE pour start puis stop</p>
-</div>
-`);
+setScreen(`<h2>9 SECONDS</h2><p>Start / Stop</p>`);
 
-window.onkeydown=(e)=>{
+window.onkeydown=e=>{
 if(e.code!=="Space")return;
 
 if(!running){
@@ -282,171 +308,126 @@ start=Date.now();
 return;
 }
 
-running=false;
-
 let t=Date.now()-start;
 score=Math.max(0,1000-Math.abs(9000-t)/8);
 
-cleanup();
-endGame(`TIME ${(t/1000).toFixed(2)}s`);
+end();
 };
 }
 
-/* ================= GAME 4 (SPAM SPACE BOX) ================= */
+/* ===== GAME 4 (SPACE SPAM) ===== */
 function g4(){
 
-let count=0;
-let start=Date.now();
+let count=0,start=Date.now();
 
-render(`
-<div class="screen">
-<h2>SPAM SPACE</h2>
-<div class="box" id="box">0</div>
-</div>
-`);
+setScreen(`<h2>SPAM SPACE</h2><div class="box" id="b">0</div>`);
 
-const box=document.getElementById("box");
+const b=document.getElementById("b");
 
-window.onkeydown=(e)=>{
+window.onkeydown=e=>{
 if(e.code!=="Space")return;
-
 count++;
-box.innerText=count;
+b.innerText=count;
 };
 
 setTimeout(()=>{
-
-let t=(Date.now()-start)/1000;
-let cps=count/t;
-
+let cps=count/((Date.now()-start)/1000);
 score=Math.min(1000,cps*150);
-
-cleanup();
-endGame(`CPS ${cps.toFixed(2)}`);
-
+end();
 },5000);
 }
 
-/* ================= GAME 5 ================= */
+/* ===== GAME 5 ===== */
 function g5(){
 
-let hits=0;
-let needed=6;
-let start=Date.now();
+let hits=0,start=Date.now();
 
-render(`
-<div class="screen">
-<h2>CIBLES</h2>
-<div class="box" id="box"></div>
-</div>
-`);
+setScreen(`<h2>CIBLES</h2><div class="box" id="box"></div>`);
 
 const box=document.getElementById("box");
 
 function finish(){
-
 let t=(Date.now()-start)/1000;
-
 score=Math.max(500,1000-t*180);
-
-cleanup();
-endGame(`TIME ${t.toFixed(2)}s`);
+end();
 }
 
-for(let i=0;i<needed;i++){
+for(let i=0;i<6;i++){
 
-const d=document.createElement("div");
+let d=document.createElement("div");
 d.className="target";
 
 d.style.left=Math.random()*80+"%";
 d.style.top=Math.random()*80+"%";
 
 d.onclick=()=>{
-hits++;
 d.remove();
-
-if(hits>=needed){
-finish();
-}
+hits++;
+if(hits>=6)finish();
 };
 
 box.appendChild(d);
 }
 }
 
-/* ================= END ================= */
-function endGame(detail=""){
+/* ===== END ===== */
+function end(){
 
+clean();
 total+=score;
 
-render(`
-<div class="screen">
-<h2>SCORE</h2>
-<h1>${Math.round(score)}</h1>
-<p>${detail}</p>
-<p>TOTAL ${total}</p>
-
-<button onclick="nextGame()">NEXT</button>
-</div>
+setScreen(`
+<h2>+${Math.round(score)}</h2>
+<p>Total : ${total}</p>
+<button class="btn" onclick="next()">NEXT</button>
 `);
 }
 
-/* ================= NEXT ================= */
-window.nextGame=()=>{
+/* ===== NEXT ===== */
+window.next=()=>{
 game++;
-if(game>=5)final();
-else next();
+if(game>=5)finish();
+else intro();
 };
 
-/* ================= FINAL ================= */
-function final(){
-
-saveBoard();
-
-render(`
-<div class="screen">
-<h1>FIN</h1>
-<h2>${total}</h2>
-
-<button onclick="menu()">MENU</button>
-<button onclick="start()">RETRY</button>
-</div>
-`);
-}
-
-/* ================= LEADERBOARD ================= */
-function saveBoard(){
+/* ===== FINAL ===== */
+function finish(){
 
 let board=JSON.parse(localStorage.getItem("board")||"[]");
 
 board.push({user,total});
-
 board.sort((a,b)=>b.total-a.total);
 
 localStorage.setItem("board",JSON.stringify(board.slice(0,10)));
+
+setScreen(`
+<h1>${total}</h1>
+<button class="btn" onclick="menu()">MENU</button>
+<button class="btn" onclick="start()">RETRY</button>
+`);
 }
 
+/* ===== LEADERBOARD ===== */
 function leaderboard(){
 
 let board=JSON.parse(localStorage.getItem("board")||"[]");
 
-render(`
-<div class="screen">
-<h2>LEADERBOARD</h2>
-
-${board.map((b,i)=>`
-<p>${i+1}. ${b.user} - ${b.total}</p>
-`).join("")}
-
-<button onclick="menu()">BACK</button>
-</div>
+setScreen(`
+<h2>Classement</h2>
+${board.map((b,i)=>`<p>${i+1}. ${b.user} - ${b.total}</p>`).join("")}
+<button class="btn" onclick="menu()">BACK</button>
 `);
 }
 
-/* ================= BOOT ================= */
+/* ===== LOGOUT ===== */
+function logout(){
+localStorage.removeItem("user");
+loginScreen();
+}
+
+/* ===== START ===== */
 loginScreen();
 
 </script>
-
 </body>
 </html>
