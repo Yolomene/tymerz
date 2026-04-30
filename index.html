@@ -15,39 +15,48 @@ font-family: 'Segoe UI', sans-serif;
 display:flex;
 justify-content:center;
 align-items:center;
+overflow:hidden;
 }
 
-#app{width:100%;max-width:1100px}
+/* ===== FULL CENTER ===== */
+#app{
+width:100%;
+height:100%;
+display:flex;
+justify-content:center;
+align-items:center;
+}
 
-/* ===== MENU ===== */
+/* ===== SCREEN ===== */
+.screen{
+width:100%;
+max-width:900px;
+display:flex;
+flex-direction:column;
+align-items:center;
+justify-content:center;
+text-align:center;
+}
+
+/* ===== TITLE ===== */
 .title{
 font-size:80px;
 font-weight:800;
 color:#9bd1ff;
-text-align:center;
 text-shadow:0 0 40px rgba(100,200,255,0.6);
 }
 
-.menu{
-display:flex;
-justify-content:center;
-gap:40px;
-margin-top:40px;
-}
-
+/* ===== CARD ===== */
 .card{
+width:100%;
 background:rgba(255,255,255,0.05);
+padding:40px;
 border-radius:25px;
-padding:30px;
-width:300px;
 backdrop-filter:blur(20px);
+margin-top:20px;
 }
 
-.center{
-width:400px;
-text-align:center;
-}
-
+/* ===== BUTTON ===== */
 .btn{
 width:100%;
 height:80px;
@@ -62,21 +71,8 @@ cursor:pointer;
 }
 
 /* ===== GAME ===== */
-.screen{
-text-align:center;
-}
-
-.header{margin-bottom:20px}
-
-.dot{
-width:10px;height:10px;border-radius:50%;
-background:#333;display:inline-block;margin:5px
-}
-
-.active{background:#4fd1ff}
-
 .box{
-height:200px;
+height:220px;
 border:2px solid #4fd1ff;
 border-radius:20px;
 display:flex;
@@ -87,12 +83,20 @@ margin-top:20px;
 }
 
 .bigCircle{
-width:120px;height:120px;border-radius:50%;background:#444;margin:20px auto;
+width:140px;height:140px;border-radius:50%;background:#444;margin:20px auto;
 }
 
 .target{
-width:40px;height:40px;border-radius:50%;background:#4fd1ff;position:absolute;
+width:45px;height:45px;border-radius:50%;background:#4fd1ff;position:absolute;
 }
+
+/* ===== HEADER ===== */
+.header{margin-bottom:20px}
+.dot{
+width:10px;height:10px;border-radius:50%;
+background:#333;display:inline-block;margin:5px
+}
+.active{background:#4fd1ff}
 </style>
 </head>
 
@@ -103,28 +107,32 @@ width:40px;height:40px;border-radius:50%;background:#4fd1ff;position:absolute;
 const app=document.getElementById("app");
 
 /* ===== STATE ===== */
-let user=null,game=0,total=0,score=0;
+let game=0,total=0,score=0,user=null;
 
 /* ===== INPUT SYSTEM PRO ===== */
-let lastPress=0;
+let keyPressed=false;
 
-function spacePressed(){
-let now=Date.now();
-if(now-lastPress<250) return false; // 🔥 anti spam GLOBAL
-lastPress=now;
-return true;
+function listenKeyDown(handler){
+window.onkeydown=(e)=>{
+if(e.code!=="Space") return;
+if(keyPressed) return; // 🔥 empêche maintien
+keyPressed=true;
+handler();
+};
 }
 
-function bindUI(fn){
-window.onkeydown=(e)=>{
-if(e.code==="Space" && !e.repeat && spacePressed()){
-fn();
+function listenKeyUp(){
+window.onkeyup=(e)=>{
+if(e.code==="Space"){
+keyPressed=false;
 }
 };
 }
 
 function clearInput(){
 window.onkeydown=null;
+window.onkeyup=null;
+keyPressed=false;
 }
 
 /* ===== HEADER ===== */
@@ -147,10 +155,13 @@ return;
 }
 
 app.innerHTML=`
+<div class="screen">
 <div class="title">timerz</div>
-<div class="card center">
+
+<div class="card">
 <input id="u" placeholder="Pseudo" style="height:50px;width:100%;text-align:center">
 <button class="btn" onclick="login()">Connexion</button>
+</div>
 </div>
 `;
 }
@@ -158,44 +169,35 @@ app.innerHTML=`
 window.login=()=>{
 let u=document.getElementById("u").value;
 if(!u)return;
+
 user=u;
 localStorage.setItem("user",u);
 menu();
 };
 
-/* ===== MENU PROPRE ===== */
+/* ===== MENU ===== */
 function menu(){
 
 let board=JSON.parse(localStorage.getItem("board")||"[]");
 
 app.innerHTML=`
+<div class="screen">
+
 <div class="title">timerz</div>
 
-<div class="menu">
-
 <div class="card">
-<h3>Podium</h3>
-${board.slice(0,3).map((b,i)=>`<p>${i+1}. ${b.user} - ${b.total}</p>`).join("")}
-</div>
-
-<div class="card center">
-<p style="color:#4ade80">Connecté : ${user}</p>
+<p>Connecté : ${user}</p>
 
 <button class="btn" onclick="start()">Jouer</button>
-
 <button class="btn" onclick="leaderboard()">Classement</button>
 <button class="btn" onclick="logout()">Déconnexion</button>
-</div>
-
-<div class="card">
-<h3>Récents</h3>
-${board.slice(-3).reverse().map(b=>`<p>${b.user} - ${b.total}</p>`).join("")}
 </div>
 
 </div>
 `;
 
-bindUI(start);
+listenKeyDown(start);
+listenKeyUp();
 }
 
 /* ===== START ===== */
@@ -213,38 +215,45 @@ const txt=[
 "Attends le vert",
 "Arrête à 9 secondes",
 "Spam espace",
-"Cibles rapides"
+"Cibles"
 ];
 
 app.innerHTML=`
 <div class="screen">
 ${header()}
-<div class="card center">
+<div class="card">
 <h2>${txt[game]}</h2>
 <button class="btn" onclick="launch()">Prêt</button>
 </div>
 </div>
 `;
 
-bindUI(launch);
+listenKeyDown(launch);
+listenKeyUp();
 }
 
 /* ===== GAME 1 ===== */
 function g1(){
-let start=0;
 
-app.innerHTML=`${header()}<div class="card center"><h2>Maintiens SPACE</h2></div>`;
+let startTime=0;
 
-window.onkeydown=e=>{
-if(e.code==="Space"&&!e.repeat) start=Date.now();
+app.innerHTML=`<div class="screen">${header()}<div class="card"><h2>Maintiens SPACE</h2></div></div>`;
+
+window.onkeydown=(e)=>{
+if(e.code==="Space" && !keyPressed){
+keyPressed=true;
+startTime=Date.now();
+}
 };
 
-window.onkeyup=e=>{
-if(e.code!=="Space")return;
+window.onkeyup=(e)=>{
+if(e.code==="Space"){
+keyPressed=false;
 
-let t=Date.now()-start;
+let t=Date.now()-startTime;
 score=Math.max(0,Math.round(1000-Math.abs(5000-t)/5));
 end(t);
+}
 };
 }
 
@@ -253,7 +262,7 @@ function g2(){
 
 let green=false,start=0;
 
-app.innerHTML=`${header()}<div class="card center"><div class="bigCircle"></div></div>`;
+app.innerHTML=`<div class="screen">${header()}<div class="card"><div class="bigCircle"></div></div></div>`;
 
 setTimeout(()=>{
 green=true;
@@ -261,13 +270,15 @@ start=Date.now();
 document.querySelector(".bigCircle").style.background="green";
 },1500+Math.random()*2000);
 
-window.onkeydown=e=>{
-if(e.code!=="Space"||!green||e.repeat)return;
+listenKeyDown(()=>{
+if(!green)return;
 
 let t=Date.now()-start;
 score=Math.max(0,Math.round(1000-t));
 end(t);
-};
+});
+
+listenKeyUp();
 }
 
 /* ===== GAME 3 ===== */
@@ -275,11 +286,9 @@ function g3(){
 
 let running=false,start=0;
 
-app.innerHTML=`${header()}<div class="card center"><h2>Start / Stop</h2></div>`;
+app.innerHTML=`<div class="screen">${header()}<div class="card"><h2>Start / Stop</h2></div></div>`;
 
-window.onkeydown=e=>{
-if(e.code!=="Space"||e.repeat)return;
-
+listenKeyDown(()=>{
 if(!running){
 running=true;
 start=Date.now();
@@ -288,7 +297,9 @@ let t=Date.now()-start;
 score=Math.max(0,Math.round(1000-Math.abs(9000-t)/8));
 end(t);
 }
-};
+});
+
+listenKeyUp();
 }
 
 /* ===== GAME 4 ===== */
@@ -296,19 +307,19 @@ function g4(){
 
 let count=0,start=Date.now();
 
-app.innerHTML=`${header()}<div class="card center"><div class="box" id="b">0</div></div>`;
+app.innerHTML=`<div class="screen">${header()}<div class="card"><div class="box" id="b">0</div></div></div>`;
 
 const b=document.getElementById("b");
 
-window.onkeydown=e=>{
-if(e.code!=="Space"||e.repeat)return;
-
+listenKeyDown(()=>{
 count++;
 b.innerText=count;
-};
+});
+
+listenKeyUp();
 
 setTimeout(()=>{
-let t=(Date.now()-start);
+let t=Date.now()-start;
 let cps=count/(t/1000);
 
 score=Math.min(1000,Math.round(cps*150));
@@ -321,18 +332,17 @@ function g5(){
 
 let hits=0,start=Date.now();
 
-app.innerHTML=`${header()}<div class="card center"><div class="box" id="box"></div></div>`;
+app.innerHTML=`<div class="screen">${header()}<div class="card"><div class="box" id="box"></div></div></div>`;
 
 const box=document.getElementById("box");
 
 function finish(){
-let t=(Date.now()-start);
+let t=Date.now()-start;
 score=Math.max(500,Math.round(1000-(t/1000)*180));
 end(t);
 }
 
 for(let i=0;i<6;i++){
-
 let d=document.createElement("div");
 d.className="target";
 
@@ -350,26 +360,30 @@ box.appendChild(d);
 }
 
 /* ===== FLOW ===== */
+
 function launch(){
+clearInput();
 [g1,g2,g3,g4,g5][game]();
 }
 
 function end(time){
-
 clearInput();
 total+=score;
 
 app.innerHTML=`
+<div class="screen">
 ${header()}
-<div class="card center">
+<div class="card">
 <h2>+${score}</h2>
 <p>Temps : ${(time/1000).toFixed(2)}s</p>
 <p>Total : ${total}</p>
 <button class="btn" onclick="next()">Continuer</button>
 </div>
+</div>
 `;
 
-bindUI(next);
+listenKeyDown(next);
+listenKeyUp();
 }
 
 function next(){
@@ -388,13 +402,16 @@ board.sort((a,b)=>b.total-a.total);
 localStorage.setItem("board",JSON.stringify(board.slice(0,10)));
 
 app.innerHTML=`
-<div class="card center">
+<div class="screen">
+<div class="card">
 <h1>${total}</h1>
 <button class="btn" onclick="menu()">Menu</button>
 </div>
+</div>
 `;
 
-bindUI(menu);
+listenKeyDown(menu);
+listenKeyUp();
 }
 
 /* ===== LEADERBOARD ===== */
@@ -403,14 +420,17 @@ function leaderboard(){
 let board=JSON.parse(localStorage.getItem("board")||"[]");
 
 app.innerHTML=`
-<div class="card center">
+<div class="screen">
+<div class="card">
 <h2>Classement</h2>
 ${board.map((b,i)=>`<p>${i+1}. ${b.user} - ${b.total}</p>`).join("")}
 <button class="btn" onclick="menu()">Retour</button>
 </div>
+</div>
 `;
 
-bindUI(menu);
+listenKeyDown(menu);
+listenKeyUp();
 }
 
 /* ===== LOGOUT ===== */
@@ -421,7 +441,7 @@ loginScreen();
 
 /* ===== START ===== */
 loginScreen();
-</script>
 
+</script>
 </body>
 </html>
