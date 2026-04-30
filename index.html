@@ -17,53 +17,64 @@ justify-content:center;
 align-items:center;
 }
 
-#app{
-width:100%;
-max-width:900px;
-}
+#app{width:100%;max-width:1100px}
 
-/* ===== CENTER ===== */
-.screen{
-width:100%;
-display:flex;
-flex-direction:column;
-align-items:center;
-justify-content:center;
-text-align:center;
-}
-
-/* ===== TITLE ===== */
+/* ===== MENU ===== */
 .title{
-font-size:70px;
+font-size:80px;
 font-weight:800;
 color:#9bd1ff;
+text-align:center;
 text-shadow:0 0 40px rgba(100,200,255,0.6);
 }
 
-/* ===== CARD ===== */
+.menu{
+display:flex;
+justify-content:center;
+gap:40px;
+margin-top:40px;
+}
+
 .card{
-width:100%;
 background:rgba(255,255,255,0.05);
-padding:30px;
 border-radius:25px;
-margin-top:20px;
+padding:30px;
+width:300px;
 backdrop-filter:blur(20px);
 }
 
-/* ===== BUTTON ===== */
+.center{
+width:400px;
+text-align:center;
+}
+
 .btn{
 width:100%;
-height:70px;
+height:80px;
 border:none;
 border-radius:20px;
-font-size:22px;
+font-size:24px;
 font-weight:bold;
 background:linear-gradient(90deg,#4fd1ff,#9f7aea);
 color:white;
 margin-top:20px;
+cursor:pointer;
 }
 
 /* ===== GAME ===== */
+.screen{
+text-align:center;
+}
+
+.header{margin-bottom:20px}
+
+.dot{
+width:10px;height:10px;border-radius:50%;
+background:#333;display:inline-block;margin:5px
+}
+
+.active{background:#4fd1ff}
+
 .box{
 height:200px;
 border:2px solid #4fd1ff;
@@ -82,14 +93,6 @@ width:120px;height:120px;border-radius:50%;background:#444;margin:20px auto;
 .target{
 width:40px;height:40px;border-radius:50%;background:#4fd1ff;position:absolute;
 }
-
-/* ===== HEADER ===== */
-.header{margin-bottom:20px}
-.dot{
-width:10px;height:10px;border-radius:50%;
-background:#333;display:inline-block;margin:5px
-}
-.active{background:#4fd1ff}
 </style>
 </head>
 
@@ -102,19 +105,21 @@ const app=document.getElementById("app");
 /* ===== STATE ===== */
 let user=null,game=0,total=0,score=0;
 
-/* ===== INPUT CONTROL ===== */
-let inputEnabled=true;
+/* ===== INPUT SYSTEM PRO ===== */
+let lastPress=0;
 
-function bindSpace(fn){
+function spacePressed(){
+let now=Date.now();
+if(now-lastPress<250) return false; // 🔥 anti spam GLOBAL
+lastPress=now;
+return true;
+}
+
+function bindUI(fn){
 window.onkeydown=(e)=>{
-if(e.code!=="Space")return;
-if(e.repeat)return;
-if(!inputEnabled)return;
-
-inputEnabled=false;
+if(e.code==="Space" && !e.repeat && spacePressed()){
 fn();
-
-setTimeout(()=>inputEnabled=true,250);
+}
 };
 }
 
@@ -142,13 +147,10 @@ return;
 }
 
 app.innerHTML=`
-<div class="screen">
 <div class="title">timerz</div>
-
-<div class="card">
+<div class="card center">
 <input id="u" placeholder="Pseudo" style="height:50px;width:100%;text-align:center">
 <button class="btn" onclick="login()">Connexion</button>
-</div>
 </div>
 `;
 }
@@ -156,34 +158,44 @@ app.innerHTML=`
 window.login=()=>{
 let u=document.getElementById("u").value;
 if(!u)return;
-
 user=u;
 localStorage.setItem("user",u);
 menu();
 };
 
-/* ===== MENU ===== */
+/* ===== MENU PROPRE ===== */
 function menu(){
 
 let board=JSON.parse(localStorage.getItem("board")||"[]");
 
 app.innerHTML=`
-<div class="screen">
-
 <div class="title">timerz</div>
 
+<div class="menu">
+
 <div class="card">
-<p>Connecté : ${user}</p>
+<h3>Podium</h3>
+${board.slice(0,3).map((b,i)=>`<p>${i+1}. ${b.user} - ${b.total}</p>`).join("")}
+</div>
+
+<div class="card center">
+<p style="color:#4ade80">Connecté : ${user}</p>
 
 <button class="btn" onclick="start()">Jouer</button>
+
 <button class="btn" onclick="leaderboard()">Classement</button>
 <button class="btn" onclick="logout()">Déconnexion</button>
+</div>
+
+<div class="card">
+<h3>Récents</h3>
+${board.slice(-3).reverse().map(b=>`<p>${b.user} - ${b.total}</p>`).join("")}
 </div>
 
 </div>
 `;
 
-bindSpace(start);
+bindUI(start);
 }
 
 /* ===== START ===== */
@@ -199,30 +211,29 @@ function intro(){
 const txt=[
 "Maintiens 5 secondes",
 "Attends le vert",
-"Arrête à 9s",
+"Arrête à 9 secondes",
 "Spam espace",
-"Cibles"
+"Cibles rapides"
 ];
 
 app.innerHTML=`
 <div class="screen">
 ${header()}
-<div class="card">
+<div class="card center">
 <h2>${txt[game]}</h2>
 <button class="btn" onclick="launch()">Prêt</button>
 </div>
 </div>
 `;
 
-bindSpace(launch);
+bindUI(launch);
 }
 
-/* ===== GAMES ===== */
-
+/* ===== GAME 1 ===== */
 function g1(){
 let start=0;
 
-app.innerHTML=`<div class="screen">${header()}<div class="card"><h2>Maintiens SPACE</h2></div></div>`;
+app.innerHTML=`${header()}<div class="card center"><h2>Maintiens SPACE</h2></div>`;
 
 window.onkeydown=e=>{
 if(e.code==="Space"&&!e.repeat) start=Date.now();
@@ -233,15 +244,16 @@ if(e.code!=="Space")return;
 
 let t=Date.now()-start;
 score=Math.max(0,Math.round(1000-Math.abs(5000-t)/5));
-end();
+end(t);
 };
 }
 
+/* ===== GAME 2 ===== */
 function g2(){
 
 let green=false,start=0;
 
-app.innerHTML=`<div class="screen">${header()}<div class="card"><div class="bigCircle"></div></div></div>`;
+app.innerHTML=`${header()}<div class="card center"><div class="bigCircle"></div></div>`;
 
 setTimeout(()=>{
 green=true;
@@ -252,16 +264,18 @@ document.querySelector(".bigCircle").style.background="green";
 window.onkeydown=e=>{
 if(e.code!=="Space"||!green||e.repeat)return;
 
-score=Math.max(0,Math.round(1000-(Date.now()-start)));
-end();
+let t=Date.now()-start;
+score=Math.max(0,Math.round(1000-t));
+end(t);
 };
 }
 
+/* ===== GAME 3 ===== */
 function g3(){
 
 let running=false,start=0;
 
-app.innerHTML=`<div class="screen">${header()}<div class="card"><h2>Start / Stop</h2></div></div>`;
+app.innerHTML=`${header()}<div class="card center"><h2>Start / Stop</h2></div>`;
 
 window.onkeydown=e=>{
 if(e.code!=="Space"||e.repeat)return;
@@ -272,16 +286,17 @@ start=Date.now();
 }else{
 let t=Date.now()-start;
 score=Math.max(0,Math.round(1000-Math.abs(9000-t)/8));
-end();
+end(t);
 }
 };
 }
 
+/* ===== GAME 4 ===== */
 function g4(){
 
 let count=0,start=Date.now();
 
-app.innerHTML=`<div class="screen">${header()}<div class="card"><div class="box" id="b">0</div></div></div>`;
+app.innerHTML=`${header()}<div class="card center"><div class="box" id="b">0</div></div>`;
 
 const b=document.getElementById("b");
 
@@ -293,24 +308,27 @@ b.innerText=count;
 };
 
 setTimeout(()=>{
-let cps=count/((Date.now()-start)/1000);
+let t=(Date.now()-start);
+let cps=count/(t/1000);
+
 score=Math.min(1000,Math.round(cps*150));
-end();
+end(t);
 },5000);
 }
 
+/* ===== GAME 5 ===== */
 function g5(){
 
 let hits=0,start=Date.now();
 
-app.innerHTML=`<div class="screen">${header()}<div class="card"><div class="box" id="box"></div></div></div>`;
+app.innerHTML=`${header()}<div class="card center"><div class="box" id="box"></div></div>`;
 
 const box=document.getElementById("box");
 
 function finish(){
-let t=(Date.now()-start)/1000;
-score=Math.max(500,Math.round(1000-t*180));
-end();
+let t=(Date.now()-start);
+score=Math.max(500,Math.round(1000-(t/1000)*180));
+end(t);
 }
 
 for(let i=0;i<6;i++){
@@ -332,27 +350,26 @@ box.appendChild(d);
 }
 
 /* ===== FLOW ===== */
-
 function launch(){
 [g1,g2,g3,g4,g5][game]();
 }
 
-function end(){
+function end(time){
+
 clearInput();
 total+=score;
 
 app.innerHTML=`
-<div class="screen">
 ${header()}
-<div class="card">
+<div class="card center">
 <h2>+${score}</h2>
+<p>Temps : ${(time/1000).toFixed(2)}s</p>
 <p>Total : ${total}</p>
 <button class="btn" onclick="next()">Continuer</button>
 </div>
-</div>
 `;
 
-bindSpace(next);
+bindUI(next);
 }
 
 function next(){
@@ -371,15 +388,13 @@ board.sort((a,b)=>b.total-a.total);
 localStorage.setItem("board",JSON.stringify(board.slice(0,10)));
 
 app.innerHTML=`
-<div class="screen">
-<div class="card">
+<div class="card center">
 <h1>${total}</h1>
 <button class="btn" onclick="menu()">Menu</button>
 </div>
-</div>
 `;
 
-bindSpace(menu);
+bindUI(menu);
 }
 
 /* ===== LEADERBOARD ===== */
@@ -388,16 +403,14 @@ function leaderboard(){
 let board=JSON.parse(localStorage.getItem("board")||"[]");
 
 app.innerHTML=`
-<div class="screen">
-<div class="card">
+<div class="card center">
 <h2>Classement</h2>
 ${board.map((b,i)=>`<p>${i+1}. ${b.user} - ${b.total}</p>`).join("")}
 <button class="btn" onclick="menu()">Retour</button>
 </div>
-</div>
 `;
 
-bindSpace(menu);
+bindUI(menu);
 }
 
 /* ===== LOGOUT ===== */
@@ -408,7 +421,7 @@ loginScreen();
 
 /* ===== START ===== */
 loginScreen();
-
 </script>
+
 </body>
 </html>
